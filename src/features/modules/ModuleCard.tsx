@@ -21,29 +21,36 @@ export const ModuleCard: React.FC<Props> = ({
   const isUnused = usageCount === 0;
   const isHighlyReused = usageCount > 1;
 
+  const metadata = [
+    `Level ${module.level}`,
+    isIndependent ? 'Independent' : null,
+    isHighlyReused ? 'Highly Reused' : null,
+    isUnused ? 'Unused' : null,
+    hasVersionLag ? 'Update Available' : null,
+    `${module.versions.length} ${module.versions.length === 1 ? 'version' : 'versions'}`
+  ].filter(Boolean);
+
   return (
     <div 
-      className={`summary-card module-card ${isSelected ? 'selected' : ''}`}
+      className={`module-card ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-level">Level {module.level}</span>
-          {isHighlyReused && <span className="badge badge-purple">Reused</span>}
-          {isIndependent && <span className="badge badge-success">Independent</span>}
-          {isUnused && <span className="badge badge-warning">Unused</span>}
-          {hasVersionLag && <span className="badge badge-outdated" title="Some programmes are using older versions">Update Available</span>}
-        </div>
-        <span className="badge badge-version">{module.versions.length} Versions</span>
+      <div className="metadata-row">
+        {metadata.map((item, index) => (
+          <React.Fragment key={index}>
+            <span className="metadata-label">{item}</span>
+            {index < metadata.length - 1 && <span className="metadata-dot">·</span>}
+          </React.Fragment>
+        ))}
       </div>
       
-      <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>{module.name}</h3>
-      <code style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)' }}>{module.code}</code>
+      <h3 style={{ marginTop: '0.5rem', fontWeight: 600, fontSize: '1.1rem' }}>{module.name}</h3>
+      <code style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>{module.code}</code>
       
       <p style={{ 
         fontSize: '0.85rem', 
         color: 'var(--text-secondary)', 
-        marginTop: '1rem',
+        marginTop: '0.75rem',
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
@@ -56,7 +63,7 @@ export const ModuleCard: React.FC<Props> = ({
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           {module.credits} Credits
         </div>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: usageCount > 0 ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
           {usageCount} {usageCount === 1 ? 'Programme' : 'Programmes'}
         </div>
       </div>

@@ -6,6 +6,7 @@ import { ProgrammeRegistry } from './features/programmes/ProgrammeRegistry';
 import { ModuleInspector } from './features/modules/ModuleInspector';
 import { MethodologyDrawer } from './components/MethodologyDrawer';
 import { validateDataset, ValidationIssue } from './lib/validation/validator';
+import { BrandHeader } from './components/BrandHeader';
 
 type View = 'modules' | 'programmes';
 
@@ -53,41 +54,35 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* HEADER */}
-      <header className="header">
-        <div className="logo-section">
-          <div className="logo-icon">SR</div>
-          <div>
-            <h1 className="title">Shared Module Repository System</h1>
-            <p className="subtitle">Core Infrastructure for Reusable Curriculum Assets</p>
-          </div>
-        </div>
-        <div className="header-actions">
-          <button 
-            className={`btn ${isMethodologyOpen ? 'btn-primary' : 'btn-secondary'}`} 
-            onClick={() => setIsMethodologyOpen(!isMethodologyOpen)}
-            style={{ position: 'relative' }}
-          >
-            Principles & Integrity
-            {hasCriticalWarnings && (
-              <span style={{ 
-                position: 'absolute', top: '-5px', right: '-5px', 
-                backgroundColor: '#ef4444', color: 'white', 
-                borderRadius: '50%', width: '18px', height: '18px', 
-                fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 10px rgba(239, 68, 68, 0.4)'
-              }}>!</span>
-            )}
-          </button>
-          <button className="btn btn-secondary" onClick={handleExport}>Export JSON</button>
-          <button className="btn btn-secondary" onClick={handleResetData}>Reset Data</button>
-        </div>
-      </header>
+      {/* BRANDING */}
+      <BrandHeader appName="Shared Module Repository System" />
 
-      {/* DISCLAIMER (Minimal) */}
-      <div style={{ padding: '0 2rem 0.5rem 2rem', fontSize: '0.7rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between' }}>
+      {/* ACTIONS */}
+      <div className="header-actions" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
+        <button 
+          className={`btn ${isMethodologyOpen ? 'btn-primary' : 'btn-secondary'}`} 
+          onClick={() => setIsMethodologyOpen(!isMethodologyOpen)}
+          style={{ position: 'relative' }}
+        >
+          Principles & Integrity
+          {hasCriticalWarnings && (
+            <span style={{ 
+              position: 'absolute', top: '-5px', right: '-5px', 
+              backgroundColor: '#111', color: 'white', 
+              borderRadius: '50%', width: '18px', height: '18px', 
+              fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>!</span>
+          )}
+        </button>
+        <button className="btn btn-secondary" onClick={handleExport}>Export JSON</button>
+        <button className="btn btn-secondary" onClick={handleResetData}>Reset Data</button>
+      </div>
+
+      {/* INTEGRITY BANNER */}
+      <div className="integrity-banner">
         <span>This tool provides structural visibility; it does not perform automated alignment or success simulation.</span>
-        <span style={{ color: hasCriticalWarnings ? '#ef4444' : 'var(--accent-primary)', fontWeight: 600 }}>
+        <span style={{ fontWeight: 600 }}>
           {validationIssues.length} Structural Integrity Signals
         </span>
       </div>
@@ -152,7 +147,7 @@ function App() {
 
       {/* FOOTER */}
       <footer className="footer">
-        <p>© 2026 CloudPedagogy. All modules are versioned based on standard repository releases.</p>
+        <p className="footer-text">CloudPedagogy · Governance-ready AI and curriculum systems</p>
       </footer>
     </div>
   );

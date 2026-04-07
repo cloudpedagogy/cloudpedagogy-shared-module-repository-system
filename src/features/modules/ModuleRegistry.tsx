@@ -108,8 +108,8 @@ export const ModuleRegistry: React.FC<Props> = ({
             padding: '4rem', 
             textAlign: 'center', 
             color: 'var(--text-muted)',
-            border: '1px dashed var(--glass-border)',
-            borderRadius: '12px'
+            border: '1px dashed var(--border-color)',
+            borderRadius: 'var(--radius-lg)'
           }}>
             No modules found matching your criteria.
           </div>

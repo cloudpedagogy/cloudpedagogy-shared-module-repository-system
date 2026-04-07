@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Module, RepositoryDataset, ModuleVersion } from '../../types';
+import { Module, RepositoryDataset } from '../../types';
 import { 
   getModuleUsage, 
   getModuleInboundDependencies, 
@@ -40,14 +40,19 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
       </button>
 
       <div style={{ marginTop: '2rem' }}>
-        <span className="badge badge-level">Level {module.level}</span>
-        <h2 style={{ fontFamily: 'var(--font-display)', margin: '1rem 0 0.5rem 0' }}>{module.name}</h2>
-        <code style={{ fontSize: '1rem', color: '#06b6d4' }}>{module.code}</code>
+        <div className="metadata-row">
+          <span className="metadata-label">Level {module.level}</span>
+          <span className="metadata-dot">·</span>
+          <span className="metadata-label">Registry Release v{latestVersionStr}</span>
+        </div>
         
-        <div style={{ padding: '0.8rem', background: 'rgba(99, 102, 241, 0.05)', borderRadius: '8px', marginTop: '1rem', border: '1px solid var(--glass-border)' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Registry Status</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-            <span className="badge badge-version" style={{ fontSize: '0.9rem' }}>Current Release: v{latestVersionStr}</span>
+        <h2 style={{ fontWeight: 700, marginTop: '0.5rem', fontSize: '1.5rem' }}>{module.name}</h2>
+        <code style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>{module.code}</code>
+        
+        <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', marginTop: '1.5rem', border: '1px solid var(--border-color)' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Governance Status</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>Published Registry Release</span>
           </div>
         </div>
 
@@ -64,18 +69,18 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
         {!comparisonVersionId && (
           <>
             <div className="dependency-section">
-              <h4>Used by Programmes</h4>
+              <h4 className="section-title">Used by Programmes</h4>
               {usage.length > 0 ? (
                 usage.map((u, i) => {
                   const isOutdated = u.versionReferenced !== latestVersionStr;
                   return (
-                    <div key={i} className="dependency-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.8rem', marginBottom: '0.8rem' }}>
+                    <div key={i} className="dependency-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <span className="label" style={{ fontWeight: 600 }}>{u.programmeName}</span>
-                        <span className="value badge badge-version">v{u.versionReferenced}</span>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{u.programmeName}</span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>v{u.versionReferenced}</span>
                       </div>
-                      <span className={`badge ${isOutdated ? 'badge-outdated' : 'badge-success'}`} style={{ alignSelf: 'flex-start' }}>
-                        {isOutdated ? `Using Older Version (Registry at v${latestVersionStr})` : 'Current Version'}
+                      <span style={{ fontSize: '0.75rem', color: isOutdated ? '#777' : 'var(--text-muted)', fontStyle: isOutdated ? 'italic' : 'normal' }}>
+                        {isOutdated ? `Outdated reference (Registry is v${latestVersionStr})` : 'Current registry version'}
                       </span>
                     </div>
                   );
@@ -87,73 +92,70 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
 
             {/* OUTBOUND DEPENDENCIES */}
             <div className="dependency-section">
-              <h4>Depends on Modules</h4>
+              <h4 className="section-title">Module Dependencies</h4>
               {outbound.length > 0 ? (
                 outbound.map((d, i) => (
-                  <div key={i} className="dependency-row">
-                    <span className="label">{d.moduleName}</span>
-                    <span className="value">{d.type} (v{d.versionConstraint}+)</span>
+                  <div key={i} className="dependency-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 500 }}>{d.moduleName}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.type} (v{d.versionConstraint}+)</span>
                   </div>
                 ))
               ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No outbound dependencies defined for latest version.</p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No outbound dependencies defined.</p>
               )}
             </div>
 
             {/* INBOUND DEPENDENCIES */}
             <div className="dependency-section">
-              <h4>Referenced by Modules</h4>
+              <h4 className="section-title">Referenced by</h4>
               {inbound.length > 0 ? (
                 inbound.map((d, i) => (
-                  <div key={i} className="dependency-row">
-                    <span className="label">{d.moduleName}</span>
-                    <span className="value">{d.type} (v{d.versionConstraint}+)</span>
+                  <div key={i} className="dependency-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 500 }}>{d.moduleName}</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.type} (v{d.versionConstraint}+)</span>
                   </div>
                 ))
               ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No other modules depend on this module.</p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No incoming dependencies.</p>
               )}
             </div>
           </>
         )}
 
         {/* VERSION HISTORY */}
-        <div className="dependency-section" style={{ borderTop: '2px solid var(--glass-border)' }}>
+        <div className="dependency-section" style={{ borderTop: '2px solid var(--border-color)', marginTop: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4>Version History</h4>
-            {comparisonVersionId && <span className="badge badge-purple">In Comparison Mode</span>}
+            <h4 className="section-title">Version History</h4>
           </div>
-          <div className="glass-panel" style={{ padding: 0, marginTop: '1rem' }}>
+          <div style={{ marginTop: '1rem' }}>
             {[...module.versions].sort((a, b) => b.releaseDate.localeCompare(a.releaseDate)).map(v => {
               const isCurrent = v.version === latestVersionStr;
               return (
-                <div key={v.id} className={`version-item ${comparisonVersionId === v.id ? 'active' : ''}`} style={{ padding: '1.2rem', background: comparisonVersionId === v.id ? 'rgba(168, 85, 247, 0.05)' : 'transparent' }}>
+                <div key={v.id} className="card" style={{ padding: '1rem', marginBottom: '1rem', border: comparisonVersionId === v.id ? '1.5px solid var(--text-primary)' : '1px solid var(--border-color)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span className="badge badge-version">v{v.version}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>v{v.version}</span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{v.releaseDate}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div className={`badge ${v.status === 'published' ? 'badge-success' : 'badge-warning'}`}>
-                      {v.status.toUpperCase()}
-                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>{v.status}</span>
                     { !isCurrent && (
                       <button 
-                        className="btn btn-secondary btn-sm" 
-                        style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem' }}
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
                         onClick={() => setComparisonVersionId(v.id)}
                       >
-                        Compare with v{latestVersionStr}
+                        Compare with latest
                       </button>
                     )}
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.8rem' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.75rem' }}>
                     {v.content}
                   </p>
                   
-                  {/* Summary of outcomes/assessments in list */}
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    <span>{v.outcomes.length} Outcomes</span>
-                    <span>{v.assessments.length} Assessments</span>
+                  <div className="metadata-row" style={{ marginTop: '1rem' }}>
+                    <span className="metadata-label">{v.outcomes.length} Outcomes</span>
+                    <span className="metadata-dot">·</span>
+                    <span className="metadata-label">{v.assessments.length} Assessments</span>
                   </div>
                 </div>
               );

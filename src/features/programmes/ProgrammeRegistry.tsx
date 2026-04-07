@@ -20,23 +20,19 @@ export const ProgrammeRegistry: React.FC<Props> = ({ programmes, dataset, onModu
   return (
     <div className={`registry-layout ${isDrawerOpen ? 'with-drawer' : ''}`}>
       <div className="programme-list-sidebar">
-        <h4 style={{ 
-          fontFamily: 'var(--font-display)', 
-          textTransform: 'uppercase', 
-          fontSize: '0.85rem', 
-          color: 'var(--text-muted)',
-          marginBottom: '1rem'
-        }}>
+        <h4 className="section-title" style={{ marginTop: 0 }}>
           Programmes
         </h4>
-        {programmes.map(p => (
-          <ProgrammeCard 
-            key={p.id}
-            programme={p}
-            isSelected={p.id === selectedProgrammeId}
-            onClick={() => setSelectedProgrammeId(p.id)}
-          />
-        ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {programmes.map(p => (
+            <ProgrammeCard 
+              key={p.id}
+              programme={p}
+              isSelected={p.id === selectedProgrammeId}
+              onClick={() => setSelectedProgrammeId(p.id)}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="programme-detail">

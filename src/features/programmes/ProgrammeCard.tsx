@@ -10,18 +10,19 @@ interface Props {
 export const ProgrammeCard: React.FC<Props> = ({ programme, isSelected, onClick }) => {
   return (
     <div 
-      className={`summary-card programme-card ${isSelected ? 'selected' : ''}`}
+      className={`programme-card ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
+      style={{ padding: '1rem', cursor: 'pointer' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-        <code style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)' }}>{programme.code}</code>
-        <span className="badge badge-version">{programme.modules.length} Modules</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
+        <code style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{programme.code}</code>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{programme.modules.length} Modules</span>
       </div>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+      <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
         {programme.name}
       </h3>
       <p style={{ 
-        fontSize: '0.85rem', 
+        fontSize: '0.8rem', 
         color: 'var(--text-secondary)',
         display: '-webkit-box',
         WebkitLineClamp: 2,
