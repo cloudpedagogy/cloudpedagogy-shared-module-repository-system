@@ -1,34 +1,36 @@
 /* CloudPedagogy Standard UI Configuration */
 :root {
-  /* Legacy Variables */
+  /* Design Tokens */
+  --color-text-primary: #111111;
+  --color-text-secondary: #555555;
+
+  --color-border-default: #e0e0e0;
+  --color-border-strong: #000000;
+
+  --font-size-body: 14px;
+  --font-size-meta: 13px;
+  --font-size-small: 12px;
+
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+
+  /* Theme Colors */
   --bg-primary: #FFFFFF;
   --bg-secondary: #FAFAFA;
   --bg-tertiary: #F3F4F6;
   
-  --text-primary: #111111;
-  --text-secondary: #666666;
-  --text-muted: #666666;
-  
-  --border-color: #E5E7EB;
+  /* Legacy/Semantic Aliases */
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-secondary);
+  --border-color: var(--color-border-default);
 
-  /* New Design Tokens */
-  --color-text-primary: #111111;
-  --color-text-secondary: #666666;
-  --color-border-default: #e0e0e0;
-  --color-border-strong: #000000;
-  --font-size-body: 14px;
-  --font-size-meta: 13px;
-  --font-size-small: 13px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  
+  /* Utilities */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  
   --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  
   --spacing-unit: 8px;
   --max-width: 1200px;
 }
@@ -88,7 +90,7 @@ a:hover {
 }
 
 .brand-name {
-  font-size: 0.85rem;
+  font-size: var(--font-size-meta);
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
@@ -125,7 +127,7 @@ a:hover {
 
 .nav-item {
   padding: calc(var(--spacing-unit) * 1.5) 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
   font-weight: 500;
   color: var(--text-muted);
   background: none;
@@ -189,20 +191,20 @@ a:hover {
   padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
   border-radius: var(--radius-md);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: var(--font-size-meta);
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: var(--font-main);
 }
 
 .btn-primary {
-  background: #000;
-  color: #fff;
+  background: var(--color-border-strong);
+  color: var(--bg-primary);
   border: none;
 }
 
 .btn-primary:hover {
-  background: #222;
+  background: var(--color-border-strong);
 }
 
 .btn-secondary {
@@ -232,7 +234,7 @@ a:hover {
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: var(--font-main);
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
 }
 
 .search-input {
@@ -242,7 +244,7 @@ a:hover {
 
 /* Labels / Metadata */
 .label, .metadata-label {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-meta);
   font-weight: 500;
   color: var(--text-muted);
   text-transform: none;
@@ -254,7 +256,7 @@ a:hover {
   gap: calc(var(--spacing-unit) * 1);
   row-gap: calc(var(--spacing-unit) * 0.5);
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-meta);
   align-items: center;
   margin-top: calc(var(--spacing-unit) * 2);
 }
@@ -293,7 +295,7 @@ a:hover {
 }
 
 .section-title {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-meta);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -308,7 +310,7 @@ a:hover {
   color: var(--text-secondary) !important;
   border: none !important;
   padding: 0 !important;
-  font-size: 0.85rem !important;
+  font-size: var(--font-size-meta) !important;
   font-weight: 400 !important;
   text-transform: none !important;
 }
@@ -322,7 +324,7 @@ a:hover {
 }
 
 .footer-text {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-meta);
   color: var(--text-muted);
 }
 
@@ -351,7 +353,7 @@ a:hover {
   border-bottom: 1px solid var(--border-color);
   padding: calc(var(--spacing-unit) * 1.5) 0;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: var(--font-size-meta);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -362,7 +364,7 @@ a:hover {
 
 .table-cell {
   padding: calc(var(--spacing-unit) * 2) 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-body);
 }
 
 /* Alerts / Integrity Signals */
@@ -370,9 +372,58 @@ a:hover {
   padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-meta);
   color: var(--text-muted);
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* -------------------------------------------------------------------------- */
+/* UI CONSISTENCY PASS (Idempotent Overrides)                                 */
+/* -------------------------------------------------------------------------- */
+
+.header-actions {
+  margin-bottom: var(--spacing-lg) !important;
+  display: flex !important;
+  gap: var(--spacing-md) !important;
+}
+
+/* Typography Consistency */
+.module-card h3, 
+.programme-card h3,
+.drawer-header h2 {
+  font-size: var(--font-size-body) !important;
+  font-weight: 600 !important;
+}
+
+.module-card p, 
+.programme-card p,
+.module-description {
+  font-size: var(--font-size-meta) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.module-card code, 
+.programme-card code,
+.metadata-label,
+.metadata-row span,
+.metadata-row div {
+  font-size: var(--font-size-meta) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+/* Link Visibility - ensure all anchors are underlined */
+a {
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+}
+
+/* Focus State Foundation */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+.card:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.2) !important;
+  outline-offset: 2px !important;
 }
