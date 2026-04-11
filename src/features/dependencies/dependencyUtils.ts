@@ -1,4 +1,5 @@
-import { RepositoryDataset, Module, ModuleVersion } from '../../types';
+import { RepositoryDataset, Module, ModuleVersion, Programme } from '../../types';
+import { compareVersions } from '../../lib/versioning';
 
 export interface UsageReference {
   programmeName: string;
@@ -11,6 +12,14 @@ export interface DependencyReference {
   moduleCode: string;
   versionConstraint?: string;
   type?: string;
+}
+
+export interface ConflictRecord {
+  moduleId: string;
+  moduleName: string;
+  severity: 'error' | 'warning';
+  message: string;
+  type: 'version_mismatch' | 'missing_dependency' | 'deprecated_usage';
 }
 
 /**
@@ -77,6 +86,74 @@ export const getModuleLatestVersion = (moduleId: string, dataset: RepositoryData
 };
 
 /**
+ * Detect conflicts within a programme context.
+ */
+export const getProgrammeConflicts = (programme: Programme, dataset: RepositoryDataset): ConflictRecord[] => {
+  const conflicts: ConflictRecord[] = [];
+  
+  programme.modules.forEach(pm => {
+    const mod = dataset.modules.find(m => m.id === pm.moduleId);
+    if (!mod) {
+      conflicts.push({
+        moduleId: pm.moduleId,
+        moduleName: 'Missing Module',
+        severity: 'error',
+        message: `Module ${pm.moduleId} referenced in programme is missing from repository.`,
+        type: 'missing_dependency'
+      });
+      return;
+    }
+
+    const ver = mod.versions.find(v => v.version === pm.version);
+    if (!ver) {
+      conflicts.push({
+        moduleId: pm.moduleId,
+        moduleName: mod.name,
+        severity: 'error',
+        message: `Version ${pm.version} of ${mod.name} is missing from repository.`,
+        type: 'missing_dependency'
+      });
+      return;
+    }
+
+    // Check Deprecation
+    if (ver.status === 'deprecated') {
+      conflicts.push({
+        moduleId: pm.moduleId,
+        moduleName: mod.name,
+        severity: 'warning',
+        message: `${mod.name} v${ver.version} is deprecated and should be replaced.`,
+        type: 'deprecated_usage'
+      });
+    }
+
+    // Check Dependencies (v2.0 requirement: all modules in programme must satisfy peer requirements)
+    ver.dependencies.forEach(dep => {
+      const peer = programme.modules.find(m => m.moduleId === dep.targetId);
+      if (!peer) {
+        conflicts.push({
+          moduleId: pm.moduleId,
+          moduleName: mod.name,
+          severity: 'warning',
+          message: `${mod.name} has a prerequisite (Module ID: ${dep.targetId}) that is not included in the programme.`,
+          type: 'missing_dependency'
+        });
+      } else if (dep.minVersion && compareVersions(peer.version, dep.minVersion) === -1) {
+        conflicts.push({
+          moduleId: pm.moduleId,
+          moduleName: mod.name,
+          severity: 'error',
+          message: `${mod.name} requires v${dep.minVersion}+ of ${dep.targetId}, but v${peer.version} is provided.`,
+          type: 'version_mismatch'
+        });
+      }
+    });
+  });
+
+  return conflicts;
+};
+
+/**
  * Check if any programme is using an older version of the module.
  */
 export const checkModuleVersionLag = (moduleId: string, dataset: RepositoryDataset): boolean => {
@@ -85,3 +162,4 @@ export const checkModuleVersionLag = (moduleId: string, dataset: RepositoryDatas
     p.modules.some(m => m.moduleId === moduleId && m.version !== latest)
   );
 };
+

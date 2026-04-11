@@ -84,6 +84,50 @@ export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, onC
         </div>
       </div>
 
+      {/* DEPENDENCIES DIFF */}
+      <div className="dependency-section">
+        <h4 className="section-title">Change Log: Dependencies</h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {newVersion.dependencies.map((dep, i) => {
+            const oldDep = oldVersion.dependencies.find(d => d.targetId === dep.targetId);
+            const isNew = !oldDep;
+            const isChanged = oldDep && oldDep.minVersion !== dep.minVersion;
+            
+            if (isNew || isChanged) {
+              return (
+                <div key={i} className="card" style={{ padding: '0.75rem', borderStyle: isNew ? 'dashed' : 'solid' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#111' }}>
+                        {isNew ? '[+]' : '[Δ]'}
+                      </span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{dep.targetId}</span>
+                    </div>
+                    <span style={{ fontSize: '0.85rem' }}>
+                      v{dep.minVersion}+
+                      {isChanged && <span style={{ color: '#777', fontWeight: 400 }}> (Upgraded from v{oldDep.minVersion}+)</span>}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })}
+          {oldVersion.dependencies.filter(od => !newVersion.dependencies.find(nd => nd.targetId === od.targetId)).map((dep, i) => (
+            <div key={`rem-${i}`} className="card" style={{ padding: '0.75rem', opacity: 0.6 }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#777' }}>[-]</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, textDecoration: 'line-through' }}>{dep.targetId}</span>
+              </div>
+            </div>
+          ))}
+          {(!newVersion.dependencies.some(nd => !oldVersion.dependencies.find(od => od.targetId === nd.targetId) || oldVersion.dependencies.find(od => od.targetId === nd.targetId)?.minVersion !== nd.minVersion) && 
+            !oldVersion.dependencies.some(od => !newVersion.dependencies.find(nd => nd.targetId === od.targetId))) && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No dependency changes detected.</p>
+          )}
+        </div>
+      </div>
+
       {/* METADATA DIFF */}
       <div className="dependency-section">
         <h4 className="section-title">Structural Signals</h4>
@@ -104,3 +148,4 @@ export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, onC
     </div>
   );
 };
+

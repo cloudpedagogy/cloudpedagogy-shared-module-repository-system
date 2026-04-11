@@ -2,6 +2,25 @@
 
 The **Shared Module Repository System (SMRS)** is a structural registry for reusable curriculum assets. It provides academic users with a professional infrastructure to browse, inspect, and track versioned learning modules across diverse programmes.
 
+## 🔗 Role in the CloudPedagogy Ecosystem
+
+**Phase:** Phase 4 — Curriculum Extensions
+
+**Role:**
+Acts as a structural registry and library for reusable, versioned curriculum assets (modules) across the ecosystem.
+
+**Upstream Inputs:**
+Validated module definitions from the **Mapping Engine**.
+
+**Downstream Outputs:**
+Feeds standardized module assets into the **Curriculum Refactoring Tool** and **Pathway Personalisation Engine**.
+
+**Does NOT:**
+- Perform workload or student strain simulation.
+- Manage institutional risk workflows or capability assessments.
+
+For a full system overview, see: [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md)
+
 ---
 
 🌐 **Live Hosted Version:**
