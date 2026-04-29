@@ -7,6 +7,7 @@ import { ModuleInspector } from './features/modules/ModuleInspector';
 import { MethodologyDrawer } from './components/MethodologyDrawer';
 import { validateDataset, ValidationIssue } from './lib/validation/validator';
 import { BrandHeader } from './components/BrandHeader';
+import { CapabilityGovernanceSection } from './components/CapabilityGovernanceSection';
 
 type View = 'modules' | 'programmes';
 
@@ -143,6 +144,13 @@ function App() {
         isOpen={isMethodologyOpen}
         onClose={() => setIsMethodologyOpen(false)}
         issues={validationIssues}
+      />
+
+      {/* Lightweight capability and governance layer */}
+      {/* Optional, non-blocking, and does not alter core workflow */}
+      <CapabilityGovernanceSection 
+        dataset={dataset}
+        onUpdate={(updates) => setDataset({ ...dataset, ...updates })}
       />
 
       {/* FOOTER */}

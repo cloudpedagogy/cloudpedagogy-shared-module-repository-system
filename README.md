@@ -19,7 +19,6 @@ Feeds standardized module assets into the **Curriculum Refactoring Tool** and **
 - Perform workload or student strain simulation.
 - Manage institutional risk workflows or capability assessments.
 
-For a full system overview, see: [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md)
 
 ---
 
@@ -47,6 +46,17 @@ For a full system overview, see: [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md)
 
 For a detailed guide on how to navigate the repository and use the inspection tools, please see the:
 [Detailed User Instructions](USER_INSTRUCTIONS.md)
+
+---
+
+## Capability and Governance
+
+This tool supports both AI capability development and lightweight governance.
+
+- Capability is developed through structured interaction with real workflows
+- Governance is supported through optional fields that make assumptions, risks, and decisions visible
+
+All governance inputs are optional and designed to support — not constrain — professional judgement.
 
 ---
 

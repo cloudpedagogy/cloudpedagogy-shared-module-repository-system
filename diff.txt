@@ -1,0 +1,98 @@
+diff --git a/INSTRUCTIONS.md b/INSTRUCTIONS.md
+index 84d052d..3c4d4bc 100644
+--- a/INSTRUCTIONS.md
++++ b/INSTRUCTIONS.md
+@@ -46,3 +46,9 @@ This system acts as a central, structured registry for reusable curriculum asset
+ ---
+ ### 10. Tips
+ - When adopting a shared module, you shouldn't alter its core outcomes, or it ceases to be "shared" and becomes a distinct fork.
++
++---
++### 11. Capability and Governance
++- **Capability:** The tool supports development of practical AI capability through structured interaction and workflow use.
++- **Governance:** The tool includes lightweight, optional fields that make assumptions, risks, and decisions visible and reviewable.
++- **Optional Fields:** You can use the optional 'Capability & Governance Notes' section at the bottom of the interface to document AI use rationale, risks, and assumptions without interrupting your main workflow.
+diff --git a/PROJECT_SPEC.md b/PROJECT_SPEC.md
+index 6d105b3..c3c6da0 100644
+--- a/PROJECT_SPEC.md
++++ b/PROJECT_SPEC.md
+@@ -54,3 +54,12 @@ The only tool in the ecosystem with a first-class "Version Control" system for c
+ 
+ ## 15. Anything Unclear or Inferred from Repo Contents
+ "ReleaseDate" and "Status" transitions are inferred to be the triggers for system-wide availability and retirement notifications.
++
++## Capability and Governance Alignment
++
++This tool is aligned with the CloudPedagogy Capability and Governance standard.
++
++- Capability: The tool supports development of practical AI capability through structured interaction and workflow use.
++- Governance: The tool includes lightweight, optional fields that make assumptions, risks, and decisions visible and reviewable.
++
++This alignment ensures the tool supports both effective use of AI and responsible, accountable practice.
+diff --git a/README.md b/README.md
+index ed41f3f..b19b69e 100644
+--- a/README.md
++++ b/README.md
+@@ -19,7 +19,6 @@ Feeds standardized module assets into the **Curriculum Refactoring Tool** and **
+ - Perform workload or student strain simulation.
+ - Manage institutional risk workflows or capability assessments.
+ 
+-For a full system overview, see: [SYSTEM_OVERVIEW.md](../SYSTEM_OVERVIEW.md)
+ 
+ ---
+ 
+@@ -50,6 +49,17 @@ For a detailed guide on how to navigate the repository and use the inspection to
+ 
+ ---
+ 
++## Capability and Governance
++
++This tool supports both AI capability development and lightweight governance.
++
++- Capability is developed through structured interaction with real workflows
++- Governance is supported through optional fields that make assumptions, risks, and decisions visible
++
++All governance inputs are optional and designed to support — not constrain — professional judgement.
++
++---
++
+ ## 🛡️ Disclaimer
+ This repository contains exploratory, framework-aligned tools developed for reflection, learning, and discussion.
+ 
+diff --git a/src/App.tsx b/src/App.tsx
+index f6c95b8..29a46d2 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -7,6 +7,7 @@ import { ModuleInspector } from './features/modules/ModuleInspector';
+ import { MethodologyDrawer } from './components/MethodologyDrawer';
+ import { validateDataset, ValidationIssue } from './lib/validation/validator';
+ import { BrandHeader } from './components/BrandHeader';
++import { CapabilityGovernanceSection } from './components/CapabilityGovernanceSection';
+ 
+ type View = 'modules' | 'programmes';
+ 
+@@ -145,6 +146,13 @@ function App() {
+         issues={validationIssues}
+       />
+ 
++      {/* Lightweight capability and governance layer */}
++      {/* Optional, non-blocking, and does not alter core workflow */}
++      <CapabilityGovernanceSection 
++        dataset={dataset}
++        onUpdate={(updates) => setDataset({ ...dataset, ...updates })}
++      />
++
+       {/* FOOTER */}
+       <footer className="footer">
+         <p className="footer-text">CloudPedagogy · Governance-ready AI and curriculum systems</p>
+diff --git a/src/types/index.ts b/src/types/index.ts
+index 322658a..3e6a3a4 100644
+--- a/src/types/index.ts
++++ b/src/types/index.ts
+@@ -48,4 +48,6 @@ export interface RepositoryDataset {
+   modules: Module[];
+   programmes: Programme[];
+   lastUpdated: string;
++  capabilityNotes?: string;
++  governanceNotes?: string;
+ }

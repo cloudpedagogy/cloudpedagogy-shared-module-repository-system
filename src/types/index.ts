@@ -48,4 +48,6 @@ export interface RepositoryDataset {
   modules: Module[];
   programmes: Programme[];
   lastUpdated: string;
+  capabilityNotes?: string;
+  governanceNotes?: string;
 }

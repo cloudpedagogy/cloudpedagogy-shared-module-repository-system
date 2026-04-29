@@ -46,3 +46,9 @@ This system acts as a central, structured registry for reusable curriculum asset
 ---
 ### 10. Tips
 - When adopting a shared module, you shouldn't alter its core outcomes, or it ceases to be "shared" and becomes a distinct fork.
+
+---
+### 11. Capability and Governance
+- **Capability:** The tool supports development of practical AI capability through structured interaction and workflow use.
+- **Governance:** The tool includes lightweight, optional fields that make assumptions, risks, and decisions visible and reviewable.
+- **Optional Fields:** You can use the optional 'Capability & Governance Notes' section at the bottom of the interface to document AI use rationale, risks, and assumptions without interrupting your main workflow.
