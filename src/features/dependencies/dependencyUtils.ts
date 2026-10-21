@@ -1,5 +1,5 @@
 import { RepositoryDataset, Module, ModuleVersion, Programme } from '../../types';
-import { compareVersions } from '../../lib/versioning';
+import { compareVersions, getLatestPublishedVersion, getHighestVersion } from '../../lib/versioning';
 
 export interface UsageReference {
   programmeName: string;
@@ -19,7 +19,7 @@ export interface ConflictRecord {
   moduleName: string;
   severity: 'error' | 'warning';
   message: string;
-  type: 'version_mismatch' | 'missing_dependency' | 'deprecated_usage';
+  type: 'version_mismatch' | 'missing_dependency' | 'deprecated_usage' | 'circular_dependency';
 }
 
 /**
@@ -77,12 +77,61 @@ export const getModuleOutboundDependencies = (version: ModuleVersion, dataset: R
 };
 
 /**
- * Get the latest version string for a module.
+ * Get the latest published version string for a module (using SemVer).
  */
 export const getModuleLatestVersion = (moduleId: string, dataset: RepositoryDataset): string => {
   const mod = dataset.modules.find(m => m.id === moduleId);
-  if (!mod || mod.versions.length === 0) return '0.0.0';
-  return mod.versions[mod.versions.length - 1].version;
+  if (!mod || !mod.versions || mod.versions.length === 0) return '0.0.0';
+  const latest = getLatestPublishedVersion(mod) ?? getHighestVersion(mod);
+  return latest ? latest.version : '0.0.0';
+};
+
+/**
+ * Detect circular prerequisite dependencies across modules.
+ */
+export const detectCircularPrerequisites = (dataset: RepositoryDataset): { hasCycle: boolean; cyclePath: string[] } => {
+  const graph = new Map<string, string[]>();
+  dataset.modules.forEach(m => {
+    const prereqIds = new Set<string>();
+    m.versions.forEach(v => {
+      v.dependencies.forEach(d => {
+        if (d.type === 'prerequisite' && d.targetId && d.targetId !== m.id) {
+          prereqIds.add(d.targetId);
+        }
+      });
+    });
+    graph.set(m.id, Array.from(prereqIds));
+  });
+
+  const visited = new Set<string>();
+  const recStack = new Set<string>();
+  let cycleFound: string[] = [];
+
+  const dfs = (node: string, currentPath: string[]): boolean => {
+    visited.add(node);
+    recStack.add(node);
+    const neighbors = graph.get(node) || [];
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        if (dfs(neighbor, [...currentPath, neighbor])) return true;
+      } else if (recStack.has(neighbor)) {
+        cycleFound = [...currentPath, neighbor];
+        return true;
+      }
+    }
+    recStack.delete(node);
+    return false;
+  };
+
+  for (const modId of graph.keys()) {
+    if (!visited.has(modId)) {
+      if (dfs(modId, [modId])) {
+        return { hasCycle: true, cyclePath: cycleFound };
+      }
+    }
+  }
+
+  return { hasCycle: false, cyclePath: [] };
 };
 
 /**
@@ -116,18 +165,40 @@ export const getProgrammeConflicts = (programme: Programme, dataset: RepositoryD
       return;
     }
 
-    // Check Deprecation
+    // Check Archived Status
+    if (ver.status === 'archived') {
+      conflicts.push({
+        moduleId: pm.moduleId,
+        moduleName: mod.name,
+        severity: 'error',
+        message: `${mod.name} v${ver.version} is archived. Archived versions must not be used in active programmes.`,
+        type: 'deprecated_usage'
+      });
+    }
+
+    // Check Deprecated Status
     if (ver.status === 'deprecated') {
       conflicts.push({
         moduleId: pm.moduleId,
         moduleName: mod.name,
         severity: 'warning',
-        message: `${mod.name} v${ver.version} is deprecated and should be replaced.`,
+        message: `${mod.name} v${ver.version} is deprecated and should be scheduled for review or upgrade.`,
         type: 'deprecated_usage'
       });
     }
 
-    // Check Dependencies (v2.0 requirement: all modules in programme must satisfy peer requirements)
+    // Check Draft Status
+    if (ver.status === 'draft') {
+      conflicts.push({
+        moduleId: pm.moduleId,
+        moduleName: mod.name,
+        severity: 'error',
+        message: `${mod.name} is pinned to unreleased draft v${ver.version}. Only published releases can be part of active programmes.`,
+        type: 'version_mismatch'
+      });
+    }
+
+    // Check Dependencies (all modules in programme must satisfy peer requirements)
     ver.dependencies.forEach(dep => {
       const peer = programme.modules.find(m => m.moduleId === dep.targetId);
       if (!peer) {
@@ -159,7 +230,6 @@ export const getProgrammeConflicts = (programme: Programme, dataset: RepositoryD
 export const checkModuleVersionLag = (moduleId: string, dataset: RepositoryDataset): boolean => {
   const latest = getModuleLatestVersion(moduleId, dataset);
   return dataset.programmes.some(p => 
-    p.modules.some(m => m.moduleId === moduleId && m.version !== latest)
+    p.modules.some(m => m.moduleId === moduleId && compareVersions(latest, m.version) > 0)
   );
 };
-

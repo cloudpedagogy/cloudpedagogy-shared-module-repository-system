@@ -19,6 +19,10 @@ export const DraftContentEditorModal: React.FC<Props> = ({
   availableModules,
   onSaveDraftContent
 }) => {
+  const [title, setTitle] = useState('');
+  const [code, setCode] = useState('');
+  const [level, setLevel] = useState<number>(module.level);
+  const [credits, setCredits] = useState<number>(module.credits);
   const [description, setDescription] = useState('');
   const [content, setContent] = useState('');
   const [outcomes, setOutcomes] = useState<string[]>([]);
@@ -28,6 +32,10 @@ export const DraftContentEditorModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (draftVersion) {
+      setTitle(draftVersion.title !== undefined ? draftVersion.title : module.name);
+      setCode(draftVersion.code !== undefined ? draftVersion.code : module.code);
+      setLevel(draftVersion.level !== undefined ? draftVersion.level : module.level);
+      setCredits(draftVersion.credits !== undefined ? draftVersion.credits : module.credits);
       setDescription(draftVersion.description || '');
       setContent(draftVersion.content || '');
       setOutcomes([...(draftVersion.outcomes || [])]);
@@ -35,7 +43,7 @@ export const DraftContentEditorModal: React.FC<Props> = ({
       setDependencies(draftVersion.dependencies ? draftVersion.dependencies.map(d => ({ ...d })) : []);
       setFormErrors([]);
     }
-  }, [draftVersion, isOpen]);
+  }, [draftVersion, module, isOpen]);
 
   if (!isOpen) return null;
 
@@ -98,6 +106,10 @@ export const DraftContentEditorModal: React.FC<Props> = ({
     const cleanedAssessments = assessments.filter(a => a.type.trim().length > 0);
 
     const updates: Partial<DraftContentInput> = {
+      title: title.trim(),
+      code: code.trim(),
+      level: Number(level),
+      credits: Number(credits),
       description: description.trim(),
       content: content.trim(),
       outcomes: cleanedOutcomes,
@@ -129,7 +141,7 @@ export const DraftContentEditorModal: React.FC<Props> = ({
               Edit Draft Curriculum Content
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Author learning outcomes, assessment components, and dependencies for this draft release.
+              Author learning outcomes, assessment components, version-specific metadata snapshots, and dependencies.
             </p>
           </div>
           <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
@@ -154,6 +166,73 @@ export const DraftContentEditorModal: React.FC<Props> = ({
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* VERSION SNAPSHOT METADATA */}
+          <div style={{
+            padding: '1rem',
+            background: 'var(--bg-secondary)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.25rem',
+            border: '1px solid var(--border-color)'
+          }}>
+            <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: 700 }}>
+              Release Snapshot Metadata
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  Release Title
+                </label>
+                <input
+                  type="text"
+                  className="search-input"
+                  style={{ width: '100%', minWidth: 'auto' }}
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  Release Code
+                </label>
+                <input
+                  type="text"
+                  className="search-input"
+                  style={{ width: '100%', minWidth: 'auto' }}
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  Academic Level
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  className="search-input"
+                  style={{ width: '100%', minWidth: 'auto' }}
+                  value={level}
+                  onChange={e => setLevel(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  Credit Rating
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className="search-input"
+                  style={{ width: '100%', minWidth: 'auto' }}
+                  value={credits}
+                  onChange={e => setCredits(Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Version Description & Content */}
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.35rem' }}>
@@ -182,59 +261,68 @@ export const DraftContentEditorModal: React.FC<Props> = ({
             />
           </div>
 
-          {/* Section: Learning Outcomes */}
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
+          {/* LEARNING OUTCOMES */}
+          <div style={{ marginBottom: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                Learning Outcomes ({outcomes.length})
-              </h3>
+              <div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                  Intended Learning Outcomes (ILOs)
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {outcomes.filter(o => o.trim()).length} outcome(s) defined (minimum 1 required for publishing)
+                </span>
+              </div>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddOutcome}>
                 + Add Outcome
               </button>
             </div>
 
-            {outcomes.length === 0 ? (
-              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No learning outcomes added yet. Click "+ Add Outcome" to define curriculum outcomes.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {outcomes.map((outcome, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', minWidth: '1.5rem' }}>
-                      #{idx + 1}
-                    </span>
-                    <input
-                      type="text"
-                      className="search-input"
-                      style={{ flex: 1, minWidth: 'auto', fontSize: '0.85rem' }}
-                      placeholder="Students will be able to..."
-                      value={outcome}
-                      onChange={e => handleUpdateOutcome(idx, e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => handleRemoveOutcome(idx)}
-                      title="Remove outcome"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {outcomes.map((outcome, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: '24px' }}>
+                    #{idx + 1}
+                  </span>
+                  <input
+                    type="text"
+                    className="search-input"
+                    style={{ flex: 1, minWidth: 'auto' }}
+                    placeholder="e.g. Critically evaluate epidemiological indicators for disease surveillance"
+                    value={outcome}
+                    onChange={e => handleUpdateOutcome(idx, e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleRemoveOutcome(idx)}
+                    style={{ padding: '0.35rem 0.6rem', color: '#ef4444' }}
+                    aria-label={`Remove outcome ${idx + 1}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {outcomes.length === 0 && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '0.5rem 0' }}>
+                  No learning outcomes yet. Click "+ Add Outcome" to define the first one.
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Section: Assessment Components */}
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          {/* ASSESSMENT STRUCTURE */}
+          <div style={{ marginBottom: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <div>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                  Assessment Structure
+                  Assessment Strategy & Weighting
                 </h3>
-                <span style={{ fontSize: '0.75rem', color: totalWeight === 100 ? '#10b981' : 'var(--text-muted)', fontWeight: 600 }}>
-                  Total Weighting: {totalWeight}% {totalWeight !== 100 && '(Drafts do not require 100% until publishing)'}
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: totalWeight === 100 ? '#10b981' : '#f59e0b'
+                }}>
+                  Total Weight: {totalWeight}% {totalWeight === 100 ? '✓ (Valid 100%)' : '⚠ (Must total exactly 100% to publish)'}
                 </span>
               </div>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddAssessment}>
@@ -242,68 +330,79 @@ export const DraftContentEditorModal: React.FC<Props> = ({
               </button>
             </div>
 
-            {assessments.length === 0 ? (
-              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No assessment components defined yet. Click "+ Add Assessment" to add exams, essays, or projects.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-                {assessments.map((a, idx) => (
-                  <div key={idx} className="card" style={{ padding: '0.75rem', display: 'grid', gridTemplateColumns: '2fr 1fr 2fr auto', gap: '0.75rem', alignItems: 'center' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Type</label>
-                      <input
-                        type="text"
-                        className="search-input"
-                        style={{ width: '100%', minWidth: 'auto', fontSize: '0.85rem' }}
-                        value={a.type}
-                        onChange={e => handleUpdateAssessment(idx, 'type', e.target.value)}
-                        placeholder="e.g. Essay"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Weight (%)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        className="search-input"
-                        style={{ width: '100%', minWidth: 'auto', fontSize: '0.85rem' }}
-                        value={a.weight}
-                        onChange={e => handleUpdateAssessment(idx, 'weight', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description (optional)</label>
-                      <input
-                        type="text"
-                        className="search-input"
-                        style={{ width: '100%', minWidth: 'auto', fontSize: '0.85rem' }}
-                        value={a.description || ''}
-                        onChange={e => handleUpdateAssessment(idx, 'description', e.target.value)}
-                        placeholder="e.g. 2,000 words"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ marginTop: '1rem' }}
-                      onClick={() => handleRemoveAssessment(idx)}
-                    >
-                      ✕
-                    </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {assessments.map((a, idx) => (
+                <div key={idx} className="card" style={{ padding: '0.75rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ flex: 2 }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                      Type
+                    </label>
+                    <input
+                      type="text"
+                      className="search-input"
+                      style={{ width: '100%', minWidth: 'auto', padding: '0.4rem' }}
+                      placeholder="e.g. Written Exam, Coursework"
+                      value={a.type}
+                      onChange={e => handleUpdateAssessment(idx, 'type', e.target.value)}
+                    />
                   </div>
-                ))}
-              </div>
-            )}
+                  <div style={{ width: '90px' }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                      Weight (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="search-input"
+                      style={{ width: '100%', minWidth: 'auto', padding: '0.4rem' }}
+                      value={a.weight}
+                      onChange={e => handleUpdateAssessment(idx, 'weight', e.target.value)}
+                    />
+                  </div>
+                  <div style={{ flex: 3 }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                      Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      className="search-input"
+                      style={{ width: '100%', minWidth: 'auto', padding: '0.4rem' }}
+                      placeholder="e.g. 2,500 word case report"
+                      value={a.description || ''}
+                      onChange={e => handleUpdateAssessment(idx, 'description', e.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleRemoveAssessment(idx)}
+                    style={{ marginTop: '1.1rem', color: '#ef4444', padding: '0.4rem 0.6rem' }}
+                    aria-label={`Remove assessment ${a.type || idx + 1}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {assessments.length === 0 && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '0.5rem 0' }}>
+                  No assessments defined. Add at least one assessment summing to 100%.
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Section: Module Dependencies */}
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                Module Dependencies ({dependencies.length})
-              </h3>
+          {/* DEPENDENCIES */}
+          <div style={{ marginBottom: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                  Curriculum Dependencies
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Prerequisites or corequisites for this module release
+                </span>
+              </div>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
@@ -314,67 +413,62 @@ export const DraftContentEditorModal: React.FC<Props> = ({
               </button>
             </div>
 
-            {dependencies.length === 0 ? (
-              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No module prerequisites or corequisites defined for this version.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-                {dependencies.map((dep, idx) => (
-                  <div key={idx} className="card" style={{ padding: '0.75rem', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target Module</label>
-                      <select
-                        className="level-select"
-                        style={{ width: '100%', fontSize: '0.85rem' }}
-                        value={dep.targetId}
-                        onChange={e => handleUpdateDependency(idx, 'targetId', e.target.value)}
-                      >
-                        {otherModules.map(m => (
-                          <option key={m.id} value={m.id}>
-                            {m.code} — {m.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Relation Type</label>
-                      <select
-                        className="level-select"
-                        style={{ width: '100%', fontSize: '0.85rem' }}
-                        value={dep.type}
-                        onChange={e => handleUpdateDependency(idx, 'type', e.target.value)}
-                      >
-                        <option value="prerequisite">Prerequisite</option>
-                        <option value="corequisite">Corequisite</option>
-                        <option value="optional">Optional</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Min Version</label>
-                      <input
-                        type="text"
-                        className="search-input"
-                        style={{ width: '100%', minWidth: 'auto', fontSize: '0.85rem' }}
-                        value={dep.minVersion || '1.0.0'}
-                        onChange={e => handleUpdateDependency(idx, 'minVersion', e.target.value)}
-                        placeholder="1.0.0"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ marginTop: '1rem' }}
-                      onClick={() => handleRemoveDependency(idx)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {dependencies.map((dep, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <select
+                    className="search-input"
+                    style={{ flex: 3, minWidth: 'auto', padding: '0.4rem' }}
+                    value={dep.targetId}
+                    onChange={e => handleUpdateDependency(idx, 'targetId', e.target.value)}
+                  >
+                    {otherModules.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.code}: {m.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="search-input"
+                    style={{ flex: 2, minWidth: 'auto', padding: '0.4rem' }}
+                    value={dep.type}
+                    onChange={e => handleUpdateDependency(idx, 'type', e.target.value)}
+                  >
+                    <option value="prerequisite">Prerequisite</option>
+                    <option value="corequisite">Corequisite</option>
+                    <option value="optional">Optional / Recommended</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    className="search-input"
+                    style={{ width: '90px', minWidth: 'auto', padding: '0.4rem' }}
+                    placeholder="Min v (e.g. 1.0.0)"
+                    value={dep.minVersion || ''}
+                    onChange={e => handleUpdateDependency(idx, 'minVersion', e.target.value)}
+                  />
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleRemoveDependency(idx)}
+                    style={{ color: '#ef4444', padding: '0.4rem 0.6rem' }}
+                    aria-label={`Remove dependency ${idx + 1}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {dependencies.length === 0 && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '0.5rem 0' }}>
+                  No dependencies declared for this release.
+                </p>
+              )}
+            </div>
           </div>
 
+          {/* ACTIONS */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel

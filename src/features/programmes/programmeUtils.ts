@@ -1,4 +1,11 @@
-import { RepositoryDataset, Module, Programme } from '../../types';
+import { RepositoryDataset, Programme } from '../../types';
+import { 
+  getVersionTitle, 
+  getVersionCode, 
+  getVersionLevel, 
+  getVersionCredits 
+} from '../../lib/modules/moduleService';
+import { getLatestPublishedVersion, getHighestVersion, compareVersions } from '../../lib/versioning';
 
 export interface ResolvedProgrammeModule {
   moduleId: string;
@@ -10,16 +17,20 @@ export interface ResolvedProgrammeModule {
   isShared: boolean;
   isOutdated: boolean;
   latestVersion: string;
+  versionStatus?: 'draft' | 'published' | 'deprecated' | 'archived';
+  isMissingModule?: boolean;
+  isMissingVersion?: boolean;
 }
 
 /**
- * Resolve programme module references into full metadata.
+ * Resolve programme module references into full, version-accurate metadata.
+ * Uses the pinned release's historical snapshot values rather than mutating canonical defaults.
  */
 export const resolveProgrammeModules = (
   programme: Programme, 
   dataset: RepositoryDataset
 ): ResolvedProgrammeModule[] => {
-  // Map module usage count across all programmes
+  // Map module usage count across all programmes to determine if shared
   const moduleUsageMap: Record<string, number> = {};
   dataset.programmes.forEach(p => {
     p.modules.forEach(m => {
@@ -33,29 +44,35 @@ export const resolveProgrammeModules = (
       return {
         moduleId: ref.moduleId,
         version: ref.version,
-        name: 'Unknown Module',
+        name: 'Missing Module Reference',
         code: ref.moduleId,
         level: 0,
         credits: 0,
         isShared: false,
         isOutdated: false,
-        latestVersion: ref.version
+        latestVersion: ref.version,
+        isMissingModule: true
       };
     }
 
-    const latest = original.versions[original.versions.length - 1];
-    const isOutdated = latest ? latest.version !== ref.version : false;
+    const pinnedVersion = original.versions.find(v => v.version === ref.version);
+    const latestPublished = getLatestPublishedVersion(original) ?? getHighestVersion(original);
+    const latestVersionStr = latestPublished ? latestPublished.version : ref.version;
+    const isOutdated = latestPublished ? compareVersions(latestPublished.version, ref.version) > 0 : false;
 
     return {
       moduleId: ref.moduleId,
       version: ref.version,
-      name: original.name,
-      code: original.code,
-      level: original.level,
-      credits: original.credits,
+      // Metadata resolved from pinned version snapshot (or canonical fallback if legacy)
+      name: getVersionTitle(pinnedVersion, original),
+      code: getVersionCode(pinnedVersion, original),
+      level: getVersionLevel(pinnedVersion, original),
+      credits: getVersionCredits(pinnedVersion, original),
       isShared: (moduleUsageMap[ref.moduleId] || 0) > 1,
       isOutdated,
-      latestVersion: latest ? latest.version : ref.version
+      latestVersion: latestVersionStr,
+      versionStatus: pinnedVersion ? pinnedVersion.status : undefined,
+      isMissingVersion: !pinnedVersion
     };
   });
 };

@@ -108,6 +108,20 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
           if (!Array.isArray(ver.dependencies)) {
             errors.push(`${vPrefix}: "dependencies" must be an array.`);
           }
+
+          // Optional snapshot metadata validation
+          if (ver.level !== undefined && (typeof ver.level !== 'number' || isNaN(ver.level) || ver.level < 1)) {
+            errors.push(`${vPrefix}: Historical level must be a positive number.`);
+          }
+          if (ver.credits !== undefined && (typeof ver.credits !== 'number' || isNaN(ver.credits) || ver.credits < 0)) {
+            errors.push(`${vPrefix}: Historical credits must be a non-negative number.`);
+          }
+          if (ver.code !== undefined && typeof ver.code !== 'string') {
+            errors.push(`${vPrefix}: Historical code must be a string.`);
+          }
+          if (ver.title !== undefined && typeof ver.title !== 'string') {
+            errors.push(`${vPrefix}: Historical title must be a string.`);
+          }
         });
       }
     });
@@ -118,6 +132,7 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
     errors.push('Dataset must contain a "programmes" array.');
   } else {
     const seenProgIds = new Set<string>();
+    const seenProgCodes = new Set<string>();
     const moduleMap = new Map<string, Module>();
     if (Array.isArray(data.modules)) {
       data.modules.forEach(m => {
@@ -140,14 +155,34 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
         seenProgIds.add(prog.id);
       }
 
+      if (!prog.code || typeof prog.code !== 'string') {
+        errors.push(`${prefix}: Missing or invalid "code".`);
+      } else {
+        const norm = prog.code.trim().toUpperCase();
+        if (seenProgCodes.has(norm)) {
+          warnings.push(`${prefix}: Programme code "${prog.code}" appears more than once.`);
+        }
+        seenProgCodes.add(norm);
+      }
+
+      if (!prog.name || typeof prog.name !== 'string') {
+        errors.push(`${prefix}: Missing or invalid "name".`);
+      }
+
       if (!Array.isArray(prog.modules)) {
         errors.push(`${prefix} (${prog.id || 'unknown'}): "modules" must be an array.`);
       } else {
+        const seenInProg = new Set<string>();
         prog.modules.forEach((pm, mIdx) => {
           if (!pm || !pm.moduleId || !pm.version) {
             errors.push(`${prefix} module ref [${mIdx}]: Must have moduleId and version.`);
             return;
           }
+          if (seenInProg.has(pm.moduleId)) {
+            errors.push(`${prefix} (${prog.name || prog.id}): Duplicate module assignment "${pm.moduleId}". A module can only be included once per programme.`);
+          }
+          seenInProg.add(pm.moduleId);
+
           const targetMod = moduleMap.get(pm.moduleId);
           if (!targetMod) {
             warnings.push(`${prefix} (${prog.name || prog.id}): References nonexistent module id "${pm.moduleId}".`);
@@ -170,6 +205,29 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
 };
 
 /**
+ * Transparently migrates legacy datasets (Schema 1) to Schema 2.
+ * Initializes historical metadata snapshots from canonical values as a documented baseline.
+ */
+export const migrateDataset = (dataset: RepositoryDataset): RepositoryDataset => {
+  const migratedModules: Module[] = dataset.modules.map(mod => ({
+    ...mod,
+    versions: mod.versions.map(ver => ({
+      ...ver,
+      title: ver.title !== undefined ? ver.title : mod.name,
+      code: ver.code !== undefined ? ver.code : mod.code,
+      level: ver.level !== undefined ? ver.level : mod.level,
+      credits: ver.credits !== undefined ? ver.credits : mod.credits
+    }))
+  }));
+
+  return {
+    ...dataset,
+    schemaVersion: dataset.schemaVersion || CURRENT_SCHEMA_VERSION,
+    modules: migratedModules
+  };
+};
+
+/**
  * Creates an empty, pristine RepositoryDataset with 0 modules and 0 programmes.
  */
 export const createBlankDataset = (): RepositoryDataset => {
@@ -184,13 +242,11 @@ export const createBlankDataset = (): RepositoryDataset => {
 };
 
 /**
- * Returns a deep copy of the demonstration dataset.
+ * Returns a deep copy of the demonstration dataset migrated to current schema.
  */
 export const loadDemoDataset = (): RepositoryDataset => {
   const cloned = JSON.parse(JSON.stringify(demoDataset)) as RepositoryDataset;
-  cloned.schemaVersion = CURRENT_SCHEMA_VERSION;
-  cloned.lastUpdated = new Date().toISOString();
-  return cloned;
+  return migrateDataset(cloned);
 };
 
 /**
@@ -211,7 +267,7 @@ export const storage = {
   },
 
   /**
-   * Loads repository data from localStorage with full schema validation.
+   * Loads repository data from localStorage with full schema validation and automatic migration.
    */
   load: (): StorageResult<RepositoryDataset> => {
     try {
@@ -238,11 +294,7 @@ export const storage = {
         };
       }
 
-      const dataset = parsed as RepositoryDataset;
-      if (!dataset.schemaVersion) {
-        dataset.schemaVersion = CURRENT_SCHEMA_VERSION;
-      }
-
+      const dataset = migrateDataset(parsed as RepositoryDataset);
       return { success: true, data: dataset };
     } catch (err) {
       return {
@@ -267,7 +319,7 @@ export const storage = {
 
       const toSave: RepositoryDataset = {
         ...dataset,
-        schemaVersion: dataset.schemaVersion || CURRENT_SCHEMA_VERSION,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
         lastUpdated: new Date().toISOString()
       };
 
@@ -303,7 +355,7 @@ export const storage = {
   exportJSON: (dataset: RepositoryDataset, filename?: string): void => {
     const toExport: RepositoryDataset = {
       ...dataset,
-      schemaVersion: dataset.schemaVersion || CURRENT_SCHEMA_VERSION,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       lastUpdated: new Date().toISOString()
     };
 
@@ -321,6 +373,7 @@ export const storage = {
 
   /**
    * Parses and validates raw JSON text for import.
+   * Enforces three-tier import integrity and automatically migrates legacy schema.
    */
   validateImportJSON: (jsonString: string): { isValid: boolean; dataset?: RepositoryDataset; errors: string[]; warnings: string[] } => {
     try {
@@ -329,7 +382,8 @@ export const storage = {
       if (!report.isValid) {
         return { isValid: false, errors: report.errors, warnings: report.warnings };
       }
-      return { isValid: true, dataset: parsed as RepositoryDataset, errors: [], warnings: report.warnings };
+      const migrated = migrateDataset(parsed as RepositoryDataset);
+      return { isValid: true, dataset: migrated, errors: [], warnings: report.warnings };
     } catch (parseErr) {
       return {
         isValid: false,

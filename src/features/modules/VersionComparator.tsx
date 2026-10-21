@@ -1,17 +1,18 @@
 import React from 'react';
-import { ModuleVersion } from '../../types';
+import { ModuleVersion, Module } from '../../types';
 import { diffOutcomes, diffAssessments, diffMetadata } from './comparisonUtils';
 
 interface Props {
   oldVersion: ModuleVersion;
   newVersion: ModuleVersion;
+  module?: Module;
   onClose: () => void;
 }
 
-export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, onClose }) => {
+export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, module, onClose }) => {
   const outcomes = diffOutcomes(oldVersion.outcomes || [], newVersion.outcomes || []);
   const assessments = diffAssessments(oldVersion.assessments || [], newVersion.assessments || []);
-  const metadata = diffMetadata(oldVersion, newVersion);
+  const metadata = diffMetadata(oldVersion, newVersion, module);
 
   return (
     <div className="version-comparator" style={{ 
@@ -25,6 +26,55 @@ export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, onC
         </h3>
         <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={onClose}>Exit Comparison</button>
       </div>
+
+      {/* ACADEMIC METADATA SNAPSHOT DIFF */}
+      {(metadata.creditsChanged || metadata.levelChanged || metadata.titleChanged || metadata.codeChanged) && (
+        <div className="dependency-section">
+          <h4 className="section-title">Academic Metadata Evolution</h4>
+          <div className="card" style={{ padding: '0.75rem', background: '#f8fafc', border: '1px solid var(--border-color)' }}>
+            {metadata.creditsChanged && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: 600 }}>Credits:</span>
+                <span>
+                  <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>{metadata.oldCredits}</span>
+                  {' → '}
+                  <strong style={{ color: '#0284c7' }}>{metadata.newCredits} Credits</strong>
+                </span>
+              </div>
+            )}
+            {metadata.levelChanged && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: 600 }}>Academic Level:</span>
+                <span>
+                  <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>Level {metadata.oldLevel}</span>
+                  {' → '}
+                  <strong style={{ color: '#0284c7' }}>Level {metadata.newLevel}</strong>
+                </span>
+              </div>
+            )}
+            {metadata.titleChanged && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: 600 }}>Title:</span>
+                <span>
+                  <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>{metadata.oldTitle}</span>
+                  {' → '}
+                  <strong>{metadata.newTitle}</strong>
+                </span>
+              </div>
+            )}
+            {metadata.codeChanged && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: 600 }}>Code:</span>
+                <span>
+                  <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>{metadata.oldCode}</span>
+                  {' → '}
+                  <code>{metadata.newCode}</code>
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* OUTCOMES DIFF */}
       <div className="dependency-section">
@@ -128,7 +178,7 @@ export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, onC
         </div>
       </div>
 
-      {/* METADATA DIFF */}
+      {/* STRUCTURAL SIGNALS */}
       <div className="dependency-section">
         <h4 className="section-title">Structural Signals</h4>
         <div className="card" style={{ padding: '0.75rem' }}>
@@ -143,9 +193,14 @@ export const VersionComparator: React.FC<Props> = ({ oldVersion, newVersion, onC
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Effective Release Date</span>
             <span style={{ fontSize: '0.85rem' }}>{newVersion.releaseDate}</span>
           </div>
+          {newVersion.sourceVersionId && (
+            <div className="dependency-row" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Source Lineage</span>
+              <span style={{ fontSize: '0.85rem' }}>Branch from v{oldVersion.version}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
-

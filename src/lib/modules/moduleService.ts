@@ -1,4 +1,6 @@
 import { Module, ModuleVersion, Dependency, RepositoryDataset } from '../../types';
+import { bumpVersion, compareVersions, validateForPublishing } from '../versioning';
+import { getModuleInboundDependencies } from '../../features/dependencies/dependencyUtils';
 
 export interface CanonicalModuleInput {
   code: string;
@@ -18,14 +20,40 @@ export interface DraftContentInput {
   outcomes?: string[];
   assessments?: { type: string; weight: number; description?: string }[];
   dependencies?: Dependency[];
+  title?: string;
+  code?: string;
+  level?: number;
+  credits?: number;
 }
 
 export interface ServiceResult<T> {
   success: boolean;
   data?: T;
   module?: Module;
+  dataset?: RepositoryDataset;
   errors: string[];
 }
+
+/**
+ * Accessors for historical metadata snapshots.
+ * If a version contains a snapshot field, that field is authoritative.
+ * Otherwise, falls back to the canonical module's current value (for legacy v1 records).
+ */
+export const getVersionTitle = (version: ModuleVersion | undefined, module: Module): string => {
+  return version?.title !== undefined && version.title.trim().length > 0 ? version.title : module.name;
+};
+
+export const getVersionCode = (version: ModuleVersion | undefined, module: Module): string => {
+  return version?.code !== undefined && version.code.trim().length > 0 ? version.code : module.code;
+};
+
+export const getVersionLevel = (version: ModuleVersion | undefined, module: Module): number => {
+  return version?.level !== undefined ? version.level : module.level;
+};
+
+export const getVersionCredits = (version: ModuleVersion | undefined, module: Module): number => {
+  return version?.credits !== undefined ? version.credits : module.credits;
+};
 
 /**
  * Generate a collision-resistant module ID.
@@ -91,6 +119,7 @@ export const validateCanonicalInputs = (
 
 /**
  * Create a new canonical module with an initial editable draft version.
+ * Snapshots the initial metadata into the version record.
  */
 export const createModule = (
   canonical: CanonicalModuleInput,
@@ -115,7 +144,12 @@ export const createModule = (
     content: initialDraft.content || 'Initial draft content',
     outcomes: initialDraft.outcomes || [],
     assessments: initialDraft.assessments || [],
-    dependencies: initialDraft.dependencies || []
+    dependencies: initialDraft.dependencies || [],
+    // Batch 2: Initial snapshot metadata
+    title: initialDraft.title?.trim() || canonical.name.trim(),
+    code: initialDraft.code?.trim() || canonical.code.trim(),
+    level: initialDraft.level !== undefined ? initialDraft.level : canonical.level,
+    credits: initialDraft.credits !== undefined ? initialDraft.credits : canonical.credits
   };
 
   const newModule: Module = {
@@ -135,7 +169,7 @@ export const createModule = (
 
 /**
  * Updates canonical module metadata.
- * Historical snapshots in `module.versions` are preserved intact.
+ * Historical snapshots in `module.versions` are strictly preserved intact.
  */
 export const updateModuleMetadata = (
   module: Module,
@@ -166,7 +200,7 @@ export const updateModuleMetadata = (
     credits: merged.credits,
     owner: merged.owner?.trim() || undefined,
     tags: merged.tags?.map(t => t.trim()).filter(Boolean) || [],
-    // Crucial: preserve existing versions snapshots without modification
+    // Crucial: preserve existing versions snapshots without mutation
     versions: [...module.versions]
   };
 
@@ -174,7 +208,7 @@ export const updateModuleMetadata = (
 };
 
 /**
- * Updates curriculum content of an initial draft version.
+ * Updates curriculum content and version-specific metadata of an active draft version.
  * Published, deprecated, or archived versions are strictly protected from modification.
  */
 export const updateDraftVersionContent = (
@@ -194,7 +228,7 @@ export const updateDraftVersionContent = (
     return {
       success: false,
       errors: [
-        `Cannot edit version ${targetVersion.version}: this version is ${targetVersion.status.toUpperCase()} and locked as an immutable snapshot. Creating successor drafts will be available in Batch 2.`
+        `Cannot edit version ${targetVersion.version}: this version is ${targetVersion.status.toUpperCase()} and locked as an immutable snapshot. Create a successor draft to make further modifications.`
       ]
     };
   }
@@ -211,13 +245,30 @@ export const updateDraftVersionContent = (
     }
   }
 
+  // Validate metadata overrides if provided
+  if (contentUpdates.level !== undefined) {
+    if (typeof contentUpdates.level !== 'number' || isNaN(contentUpdates.level) || contentUpdates.level < 1) {
+      return { success: false, errors: ['Academic level must be a positive number.'] };
+    }
+  }
+
+  if (contentUpdates.credits !== undefined) {
+    if (typeof contentUpdates.credits !== 'number' || isNaN(contentUpdates.credits) || contentUpdates.credits < 0) {
+      return { success: false, errors: ['Credits must be a non-negative number.'] };
+    }
+  }
+
   const updatedVersion: ModuleVersion = {
     ...targetVersion,
     description: contentUpdates.description !== undefined ? contentUpdates.description : targetVersion.description,
     content: contentUpdates.content !== undefined ? contentUpdates.content : targetVersion.content,
     outcomes: contentUpdates.outcomes !== undefined ? contentUpdates.outcomes : targetVersion.outcomes,
     assessments: contentUpdates.assessments !== undefined ? contentUpdates.assessments : targetVersion.assessments,
-    dependencies: contentUpdates.dependencies !== undefined ? contentUpdates.dependencies : targetVersion.dependencies
+    dependencies: contentUpdates.dependencies !== undefined ? contentUpdates.dependencies : targetVersion.dependencies,
+    title: contentUpdates.title !== undefined ? contentUpdates.title.trim() : (targetVersion.title ?? module.name),
+    code: contentUpdates.code !== undefined ? contentUpdates.code.trim() : (targetVersion.code ?? module.code),
+    level: contentUpdates.level !== undefined ? contentUpdates.level : (targetVersion.level ?? module.level),
+    credits: contentUpdates.credits !== undefined ? contentUpdates.credits : (targetVersion.credits ?? module.credits)
   };
 
   const updatedVersions = [...module.versions];
@@ -243,4 +294,283 @@ export const hasDraftVersion = (module: Module): boolean => {
  */
 export const getActiveDraftVersion = (module: Module): ModuleVersion | undefined => {
   return module.versions.find(v => v.status === 'draft');
+};
+
+/**
+ * Creates a new successor draft from an existing published release.
+ * Enforces single active draft rule and semver ordering.
+ */
+export const createSuccessorDraft = (
+  module: Module,
+  sourceVersionId: string,
+  bumpType: 'major' | 'minor' | 'patch' | 'custom',
+  customVersionString?: string,
+  description?: string
+): ServiceResult<Module> => {
+  // Enforce single active draft rule
+  if (hasDraftVersion(module)) {
+    return {
+      success: false,
+      errors: ['Module already has an active draft version. Complete, publish, or discard the current draft before creating a successor draft.']
+    };
+  }
+
+  const sourceVersion = module.versions.find(v => v.id === sourceVersionId);
+  if (!sourceVersion) {
+    return { success: false, errors: [`Source version id "${sourceVersionId}" not found.`] };
+  }
+
+  let nextVersionStr = '';
+  if (bumpType === 'custom') {
+    nextVersionStr = customVersionString?.trim() || '';
+  } else {
+    nextVersionStr = bumpVersion(sourceVersion.version, bumpType);
+  }
+
+  if (!nextVersionStr || !/^\d+\.\d+(\.\d+)?$/.test(nextVersionStr)) {
+    return { success: false, errors: [`Invalid semantic version format "${nextVersionStr}". Format must be X.Y or X.Y.Z.`] };
+  }
+
+  // Prevent duplicate version strings
+  if (module.versions.some(v => v.version === nextVersionStr)) {
+    return { success: false, errors: [`Duplicate version label "v${nextVersionStr}" already exists for this module.`] };
+  }
+
+  // Ensure semantic progression (successor must be > source)
+  if (compareVersions(nextVersionStr, sourceVersion.version) <= 0) {
+    return {
+      success: false,
+      errors: [`Successor version (v${nextVersionStr}) must be higher than the source version (v${sourceVersion.version}).`]
+    };
+  }
+
+  const newDraftId = generateVersionId();
+  const successorDraft: ModuleVersion = {
+    id: newDraftId,
+    moduleId: module.id,
+    version: nextVersionStr,
+    status: 'draft',
+    description: description?.trim() || `Successor draft incremented from v${sourceVersion.version}`,
+    releaseDate: new Date().toISOString().split('T')[0],
+    content: sourceVersion.content || '',
+    // Independent copy of curriculum content
+    outcomes: [...(sourceVersion.outcomes || [])],
+    assessments: (sourceVersion.assessments || []).map(a => ({ ...a })),
+    dependencies: (sourceVersion.dependencies || []).map(d => ({ ...d })),
+    // Snapshot historical metadata from source version
+    title: getVersionTitle(sourceVersion, module),
+    code: getVersionCode(sourceVersion, module),
+    level: getVersionLevel(sourceVersion, module),
+    credits: getVersionCredits(sourceVersion, module),
+    sourceVersionId: sourceVersion.id
+  };
+
+  const updatedModule: Module = {
+    ...module,
+    versions: [...module.versions, successorDraft]
+  };
+
+  return { success: true, data: updatedModule, module: updatedModule, errors: [] };
+};
+
+/**
+ * Transition an active draft version to published status.
+ * Validates readiness and creates an immutable snapshot.
+ */
+export const publishDraftVersion = (
+  module: Module,
+  versionId: string
+): ServiceResult<Module> => {
+  const targetIndex = module.versions.findIndex(v => v.id === versionId);
+  if (targetIndex === -1) {
+    return { success: false, errors: [`Version id "${versionId}" not found.`] };
+  }
+
+  const targetVersion = module.versions[targetIndex];
+  if (targetVersion.status !== 'draft') {
+    return { success: false, errors: [`Version v${targetVersion.version} is already ${targetVersion.status}. Only draft versions can be published.`] };
+  }
+
+  // Pre-flight publishing validation
+  const validation = validateForPublishing(targetVersion, module);
+  if (!validation.isValid) {
+    return { success: false, errors: validation.errors };
+  }
+
+  // Ensure uniqueness of version string among all versions in module
+  const duplicates = module.versions.filter(v => v.id !== versionId && v.version === targetVersion.version);
+  if (duplicates.length > 0) {
+    return { success: false, errors: [`Version label "v${targetVersion.version}" conflicts with an existing release.`] };
+  }
+
+  const frozenTitle = getVersionTitle(targetVersion, module);
+  const frozenCode = getVersionCode(targetVersion, module);
+  const frozenLevel = getVersionLevel(targetVersion, module);
+  const frozenCredits = getVersionCredits(targetVersion, module);
+
+  const publishedVersion: ModuleVersion = {
+    ...targetVersion,
+    status: 'published',
+    releaseDate: new Date().toISOString().split('T')[0],
+    title: frozenTitle,
+    code: frozenCode,
+    level: frozenLevel,
+    credits: frozenCredits
+  };
+
+  const updatedVersions = [...module.versions];
+  updatedVersions[targetIndex] = publishedVersion;
+
+  // Canonical defaults are updated to match this latest publication
+  const updatedModule: Module = {
+    ...module,
+    name: frozenTitle,
+    code: frozenCode,
+    level: frozenLevel,
+    credits: frozenCredits,
+    versions: updatedVersions
+  };
+
+  return { success: true, data: updatedModule, module: updatedModule, errors: [] };
+};
+
+/**
+ * Transitions a published version to deprecated status.
+ * Historical content and existing programme pins remain resolvable.
+ */
+export const deprecateVersion = (
+  module: Module,
+  versionId: string
+): ServiceResult<Module> => {
+  const targetIndex = module.versions.findIndex(v => v.id === versionId);
+  if (targetIndex === -1) {
+    return { success: false, errors: [`Version id "${versionId}" not found.`] };
+  }
+
+  const targetVersion = module.versions[targetIndex];
+  if (targetVersion.status !== 'published') {
+    return { success: false, errors: [`Only published versions can be deprecated (current status: ${targetVersion.status}).`] };
+  }
+
+  const deprecatedVersion: ModuleVersion = {
+    ...targetVersion,
+    status: 'deprecated'
+  };
+
+  const updatedVersions = [...module.versions];
+  updatedVersions[targetIndex] = deprecatedVersion;
+
+  return {
+    success: true,
+    data: { ...module, versions: updatedVersions },
+    module: { ...module, versions: updatedVersions },
+    errors: []
+  };
+};
+
+/**
+ * Transitions a published or deprecated version to archived status.
+ * Historical content and existing programme pins remain resolvable.
+ */
+export const archiveVersion = (
+  module: Module,
+  versionId: string
+): ServiceResult<Module> => {
+  const targetIndex = module.versions.findIndex(v => v.id === versionId);
+  if (targetIndex === -1) {
+    return { success: false, errors: [`Version id "${versionId}" not found.`] };
+  }
+
+  const targetVersion = module.versions[targetIndex];
+  if (targetVersion.status !== 'published' && targetVersion.status !== 'deprecated') {
+    return { success: false, errors: [`Only published or deprecated versions can be archived (current status: ${targetVersion.status}).`] };
+  }
+
+  const archivedVersion: ModuleVersion = {
+    ...targetVersion,
+    status: 'archived'
+  };
+
+  const updatedVersions = [...module.versions];
+  updatedVersions[targetIndex] = archivedVersion;
+
+  return {
+    success: true,
+    data: { ...module, versions: updatedVersions },
+    module: { ...module, versions: updatedVersions },
+    errors: []
+  };
+};
+
+/**
+ * Discard an active draft version.
+ * Cannot discard if it is the only version in the module.
+ */
+export const discardDraftVersion = (
+  module: Module,
+  versionId: string
+): ServiceResult<Module> => {
+  const target = module.versions.find(v => v.id === versionId);
+  if (!target) {
+    return { success: false, errors: [`Version id "${versionId}" not found.`] };
+  }
+  if (target.status !== 'draft') {
+    return { success: false, errors: [`Cannot discard version v${target.version}: it is ${target.status}, not a draft.`] };
+  }
+  if (module.versions.length <= 1) {
+    return { success: false, errors: ['Cannot discard the only version of a module. A module must retain at least one version.'] };
+  }
+
+  const remaining = module.versions.filter(v => v.id !== versionId);
+  const updatedModule = { ...module, versions: remaining };
+  return { success: true, data: updatedModule, module: updatedModule, errors: [] };
+};
+
+/**
+ * Safely delete a canonical module from the repository dataset.
+ * Strictly blocks deletion if referenced by any programme or depended on by any other module.
+ */
+export const deleteModuleSafely = (
+  dataset: RepositoryDataset,
+  moduleId: string
+): ServiceResult<RepositoryDataset> => {
+  const target = dataset.modules.find(m => m.id === moduleId);
+  if (!target) {
+    return { success: false, errors: [`Module id "${moduleId}" not found.`] };
+  }
+
+  // 1. Check programme references
+  const referencingProgrammes = dataset.programmes.filter(p =>
+    p.modules.some(pm => pm.moduleId === moduleId)
+  );
+  if (referencingProgrammes.length > 0) {
+    const names = referencingProgrammes.map(p => `"${p.name} (${p.code})"`).join(', ');
+    return {
+      success: false,
+      errors: [
+        `Cannot delete module "${target.name}": it is referenced in programme(s) ${names}. Remove this module from all programmes before deleting.`
+      ]
+    };
+  }
+
+  // 2. Check inbound module dependencies
+  const inboundDeps = getModuleInboundDependencies(moduleId, dataset);
+  if (inboundDeps.length > 0) {
+    const depNames = inboundDeps.map(d => `"${d.moduleName} (${d.moduleCode})"`).join(', ');
+    return {
+      success: false,
+      errors: [
+        `Cannot delete module "${target.name}": it is declared as a dependency by ${depNames}. Remove these dependencies before deleting.`
+      ]
+    };
+  }
+
+  const updatedModules = dataset.modules.filter(m => m.id !== moduleId);
+  const updatedDataset: RepositoryDataset = {
+    ...dataset,
+    modules: updatedModules,
+    lastUpdated: new Date().toISOString()
+  };
+
+  return { success: true, data: updatedDataset, dataset: updatedDataset, errors: [] };
 };

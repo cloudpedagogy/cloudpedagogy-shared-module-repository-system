@@ -25,6 +25,12 @@ export interface ModuleVersion {
     description?: string; 
   }[];
   dependencies: Dependency[];
+  // Batch 2: Version-specific historical metadata snapshot
+  title?: string;
+  code?: string;
+  level?: number;
+  credits?: number;
+  sourceVersionId?: string;
 }
 
 export interface Programme {
