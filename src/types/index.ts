@@ -45,6 +45,7 @@ export interface Dependency {
 }
 
 export interface RepositoryDataset {
+  schemaVersion?: number;
   modules: Module[];
   programmes: Programme[];
   lastUpdated: string;

@@ -15,9 +15,19 @@ interface Props {
   onClose: () => void;
   dataset: RepositoryDataset;
   onPublishVersion?: (moduleId: string, versionId: string) => void;
+  onOpenEditMetadata?: (module: Module) => void;
+  onOpenEditDraftContent?: (module: Module, version: ModuleVersion) => void;
 }
 
-export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, dataset, onPublishVersion }) => {
+export const ModuleInspector: React.FC<Props> = ({
+  module,
+  isOpen,
+  onClose,
+  dataset,
+  onPublishVersion,
+  onOpenEditMetadata,
+  onOpenEditDraftContent
+}) => {
   const [comparisonVersionId, setComparisonVersionId] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
@@ -32,8 +42,11 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
   const comparisonOldVersion = module.versions.find(v => v.id === comparisonVersionId);
   const comparisonNewVersion = latestVersion;
 
+  const hasDraft = module.versions.some(v => v.status === 'draft');
+  const isPublishedOnly = !hasDraft;
+
   const handlePublishClick = (v: ModuleVersion) => {
-    const result = validateForPublishing(v);
+    const result = validateForPublishing(v, module);
     setValidationResult(result);
     if (result.isValid && onPublishVersion) {
       onPublishVersion(module.id, v.id);
@@ -51,23 +64,97 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
       </button>
 
       <div style={{ marginTop: '2rem' }}>
-        <div className="metadata-row">
+        <div className="metadata-row" style={{ marginTop: 0 }}>
           <span className="metadata-label">Level {module.level}</span>
           <span className="metadata-dot">·</span>
-          <span className="metadata-label">Registry Release v{latestVersionStr}</span>
+          <span className="metadata-label">{module.credits} Credits</span>
+          <span className="metadata-dot">·</span>
+          <span className="metadata-label">v{latestVersionStr}</span>
+          {hasDraft && (
+            <>
+              <span className="metadata-dot">·</span>
+              <span className="metadata-label" style={{ color: '#10b981', fontWeight: 700 }}>Has Active Draft</span>
+            </>
+          )}
         </div>
         
-        <h2 style={{ fontWeight: 700, marginTop: '0.5rem', fontSize: '1.5rem' }}>{module.name}</h2>
-        <code style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>{module.code}</code>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '0.5rem' }}>
+          <div>
+            <h2 style={{ fontWeight: 700, fontSize: '1.45rem', margin: 0 }}>{module.name}</h2>
+            <code style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.2rem' }}>
+              {module.code}
+            </code>
+          </div>
+          {onOpenEditMetadata && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => onOpenEditMetadata(module)}
+              style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', whiteSpace: 'nowrap' }}
+            >
+              Edit Metadata
+            </button>
+          )}
+        </div>
+
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: '1.5' }}>
+          {module.description || 'No module description provided.'}
+        </p>
+
+        {module.owner && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+            Faculty / Owner: <strong>{module.owner}</strong>
+          </div>
+        )}
+
+        {module.tags && module.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+            {module.tags.map((tag, i) => (
+              <span key={i} style={{ fontSize: '0.7rem', background: 'var(--bg-tertiary)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
         
-        <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', marginTop: '1.5rem', border: '1px solid var(--border-color)' }}>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Governance Status</span>
+        {/* Governance / Lifecycle Status */}
+        <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', marginTop: '1.25rem', border: '1px solid var(--border-color)' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
+            Governance Status
+          </span>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.25rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-              {latestVersion?.status === 'published' ? 'Published Registry Release' : 'Draft / Proposal'}
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+              {latestVersion?.status === 'published' ? 'Published Registry Release' : 'Draft / Proposal Under Authoring'}
+            </span>
+            <span style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              padding: '0.2rem 0.5rem',
+              borderRadius: '4px',
+              background: latestVersion?.status === 'published' ? '#ecfdf5' : '#eff6ff',
+              color: latestVersion?.status === 'published' ? '#065f46' : '#1e40af'
+            }}>
+              {latestVersion?.status}
             </span>
           </div>
         </div>
+
+        {/* Published Historical Protection Notice */}
+        {isPublishedOnly && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-secondary)',
+            borderLeft: '3px solid var(--text-primary)',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            lineHeight: '1.4'
+          }}>
+            <strong>Published Version Locked:</strong> All version releases for this module are currently published and locked as immutable historical records. Creating an editable successor draft will be available in Batch 2 (Version Lifecycle Engine).
+          </div>
+        )}
 
         {/* VALIDATION FEEDBACK */}
         {validationResult && (
@@ -143,9 +230,9 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
         )}
 
         {/* VERSION HISTORY */}
-        <div className="dependency-section" style={{ borderTop: '2px solid var(--border-color)', marginTop: '3rem' }}>
+        <div className="dependency-section" style={{ borderTop: '2px solid var(--border-color)', marginTop: '2.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 className="section-title">Version History</h4>
+            <h4 className="section-title">Version History & Snapshots</h4>
           </div>
           <div style={{ marginTop: '1rem' }}>
             {[...module.versions].sort((a, b) => b.releaseDate.localeCompare(a.releaseDate)).map(v => {
@@ -153,41 +240,65 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
               const isDraft = v.status === 'draft';
               return (
                 <div key={v.id} className="card" style={{ padding: '1rem', marginBottom: '1rem', border: comparisonVersionId === v.id ? '1.5px solid var(--text-primary)' : '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>v{v.version}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>v{v.version}</span>
+                      <span style={{
+                        fontSize: '0.65rem',
+                        color: isDraft ? '#1e40af' : v.status === 'deprecated' ? '#ef4444' : 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        padding: '0.1rem 0.4rem',
+                        borderRadius: '3px',
+                        background: isDraft ? '#eff6ff' : 'var(--bg-secondary)'
+                      }}>
+                        {isDraft ? 'Draft — Editable' : `${v.status} — Locked`}
+                      </span>
+                    </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{v.releaseDate}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '0.7rem', color: v.status === 'deprecated' ? '#ef4444' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>{v.status}</span>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {isDraft && (
-                        <button 
-                          className="btn btn-primary" 
-                          style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
-                          onClick={() => handlePublishClick(v)}
-                        >
-                          Publish
-                        </button>
-                      )}
-                      {!isLatest && (
-                        <button 
-                          className="btn btn-secondary" 
-                          style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
-                          onClick={() => { setComparisonVersionId(v.id); setValidationResult(null); }}
-                        >
-                          Compare
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.75rem' }}>
-                    {v.description || 'No description provided.'}
+
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0' }}>
+                    {v.description || 'No release description provided.'}
                   </p>
                   
-                  <div className="metadata-row" style={{ marginTop: '1rem' }}>
+                  <div className="metadata-row" style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
                     <span className="metadata-label">{v.outcomes?.length || 0} Outcomes</span>
                     <span className="metadata-dot">·</span>
                     <span className="metadata-label">{v.assessments?.length || 0} Assessments</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                    {isDraft && onOpenEditDraftContent && (
+                      <button 
+                        type="button"
+                        className="btn btn-primary" 
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        onClick={() => onOpenEditDraftContent(module, v)}
+                      >
+                        Edit Draft Content
+                      </button>
+                    )}
+                    {isDraft && (
+                      <button 
+                        type="button"
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        onClick={() => handlePublishClick(v)}
+                      >
+                        Check Readiness
+                      </button>
+                    )}
+                    {!isLatest && (
+                      <button 
+                        type="button"
+                        className="btn btn-secondary" 
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        onClick={() => { setComparisonVersionId(v.id); setValidationResult(null); }}
+                      >
+                        Compare with Latest
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -198,4 +309,3 @@ export const ModuleInspector: React.FC<Props> = ({ module, isOpen, onClose, data
     </div>
   );
 };
-

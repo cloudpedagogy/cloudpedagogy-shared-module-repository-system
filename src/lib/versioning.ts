@@ -1,4 +1,4 @@
-import { ModuleVersion } from '../types';
+import { Module, ModuleVersion } from '../types';
 
 /**
  * Normalize simplified versions (e.g. '1' -> '1.0.0', '1.0' -> '1.0.0')
@@ -35,7 +35,7 @@ export interface ValidationResult {
 /**
  * Validate a module version before publishing.
  */
-export const validateForPublishing = (version: ModuleVersion): ValidationResult => {
+export const validateForPublishing = (version: ModuleVersion, parentModule?: Module): ValidationResult => {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -57,13 +57,14 @@ export const validateForPublishing = (version: ModuleVersion): ValidationResult 
     errors.push('Module must have a substantive description (min 10 characters).');
   }
 
-  // Warnings
-  if (!version.credits || version.credits <= 0) {
-    warnings.push('Credits are currently set to 0. Please verify if this is correct.');
-  }
-
-  if (!version.level || version.level < 4) {
-    warnings.push('Module level is set below HE Level 4. Please verify if this is intentional.');
+  // Canonical metadata warnings (checked on parent module if provided)
+  if (parentModule) {
+    if (typeof parentModule.credits !== 'number' || parentModule.credits <= 0) {
+      warnings.push('Module credits are not defined or set to 0. Please verify credit rating.');
+    }
+    if (typeof parentModule.level !== 'number' || parentModule.level <= 0) {
+      warnings.push('Module academic level is not defined or non-positive.');
+    }
   }
 
   return {

@@ -20,8 +20,11 @@ export const ModuleCard: React.FC<Props> = ({
 }) => {
   const isUnused = usageCount === 0;
   const isHighlyReused = usageCount > 1;
+  const latestVersion = module.versions[module.versions.length - 1];
+  const isDraft = latestVersion?.status === 'draft';
 
   const metadata = [
+    isDraft ? 'Draft' : null,
     `Level ${module.level}`,
     isIndependent ? 'Independent' : null,
     isHighlyReused ? 'Highly Reused' : null,
@@ -30,10 +33,21 @@ export const ModuleCard: React.FC<Props> = ({
     `${module.versions.length} ${module.versions.length === 1 ? 'version' : 'versions'}`
   ].filter(Boolean);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div 
       className={`module-card ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
     >
       <div className="metadata-row">
         {metadata.map((item, index) => (
