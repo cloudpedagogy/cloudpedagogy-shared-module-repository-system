@@ -47,6 +47,19 @@ export const ModuleInspector: React.FC<Props> = ({
   const [comparisonVersionId, setComparisonVersionId] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        setValidationResult(null);
+        setComparisonVersionId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!module) return null;
 
   const usage = getModuleUsage(module.id, dataset);
@@ -165,22 +178,60 @@ export const ModuleInspector: React.FC<Props> = ({
             </span>
           </div>
 
-          {/* SUCCESSOR DRAFT BUTTON */}
-          <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
-            {hasDraft ? (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Single active draft rule enforced. Publish or discard v{activeDraft?.version} to start another draft.
-              </span>
+          {/* DIRECT DRAFT ACTIONS OR SUCCESSOR DRAFT BUTTON */}
+          <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {hasDraft && activeDraft ? (
+              <>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {onOpenEditDraftContent && (
+                    <button
+                      type="button"
+                      id="drawer-edit-draft-btn"
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                      onClick={() => onOpenEditDraftContent(module, activeDraft)}
+                    >
+                      ✎ Edit Draft Content
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    id="drawer-check-readiness-btn"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                    onClick={() => handleCheckReadiness(activeDraft)}
+                  >
+                    Check Readiness
+                  </button>
+                  {onOpenPublishConfirm && (
+                    <button
+                      type="button"
+                      id="drawer-publish-release-btn"
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', background: '#059669', borderColor: '#047857' }}
+                      onClick={() => onOpenPublishConfirm(module, activeDraft)}
+                    >
+                      Publish Release
+                    </button>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Single active draft policy in effect.
+                </span>
+              </>
             ) : (
               onOpenCreateSuccessorDraft && (
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
-                  onClick={() => onOpenCreateSuccessorDraft(module)}
-                >
-                  + Create Successor Draft
-                </button>
+                <div style={{ display: 'flex', width: '100%', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    id="drawer-create-successor-btn"
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                    onClick={() => onOpenCreateSuccessorDraft(module)}
+                  >
+                    + Create Successor Draft
+                  </button>
+                </div>
               )
             )}
           </div>
@@ -217,69 +268,8 @@ export const ModuleInspector: React.FC<Props> = ({
           />
         )}
 
-        {/* STRUCTURAL USAGE SECTION (Impact Analysis) */}
-        {!comparisonVersionId && (
-          <>
-            <div className="dependency-section">
-              <h4 className="section-title">Impact Analysis: Used by Programmes</h4>
-              {usage.length > 0 ? (
-                usage.map((u, i) => {
-                  const isOutdated = u.versionReferenced !== latestVersionStr;
-                  const isDeprecated = module.versions.find(v => v.version === u.versionReferenced)?.status === 'deprecated';
-                  const isArchived = module.versions.find(v => v.version === u.versionReferenced)?.status === 'archived';
-                  return (
-                    <div key={i} className="dependency-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{u.programmeName}</span>
-                        <span style={{ fontSize: '0.85rem', color: (isDeprecated || isArchived) ? '#ef4444' : 'var(--text-muted)' }}>
-                          v{u.versionReferenced}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: (isDeprecated || isArchived) ? '#ef4444' : isOutdated ? '#777' : 'var(--text-muted)', fontStyle: (isOutdated || isDeprecated || isArchived) ? 'italic' : 'normal' }}>
-                        {isArchived ? 'Using archived version' : isDeprecated ? 'Using deprecated version' : isOutdated ? `Outdated reference (Registry is v${latestVersionStr})` : 'Current registry version'}
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Not referenced by any programme.</p>
-              )}
-            </div>
-
-            {/* INBOUND DEPENDENCIES */}
-            <div className="dependency-section">
-              <h4 className="section-title">Inbound Dependencies (Modules Depending on This)</h4>
-              {inbound.length > 0 ? (
-                inbound.map((d, i) => (
-                  <div key={i} className="dependency-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 500 }}>{d.moduleName} ({d.moduleCode})</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.type} (v{d.versionConstraint || '1.0.0'}+)</span>
-                  </div>
-                ))
-              ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No other modules depend on this module.</p>
-              )}
-            </div>
-
-            {/* OUTBOUND DEPENDENCIES */}
-            <div className="dependency-section">
-              <h4 className="section-title">Outbound Dependencies (v{latestVersion?.version})</h4>
-              {outbound.length > 0 ? (
-                outbound.map((d, i) => (
-                  <div key={i} className="dependency-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 500 }}>{d.moduleName}</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.type} (v{d.versionConstraint}+)</span>
-                  </div>
-                ))
-              ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No outbound dependencies defined.</p>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* VERSION HISTORY */}
-        <div className="dependency-section" style={{ borderTop: '2px solid var(--border-color)', marginTop: '2.5rem' }}>
+        {/* VERSION HISTORY & SNAPSHOTS */}
+        <div className="dependency-section" style={{ borderTop: '2px solid var(--border-color)', marginTop: '1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 className="section-title">Version History & Snapshots</h4>
           </div>
@@ -430,6 +420,84 @@ export const ModuleInspector: React.FC<Props> = ({
             })}
           </div>
         </div>
+
+        {/* RELATIONAL IMPACT & DEPENDENCY ANALYSIS (COLLAPSIBLE) */}
+        {!comparisonVersionId && (
+          <details style={{
+            marginTop: '2rem',
+            marginBottom: '1.5rem',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.85rem 1rem',
+            background: 'var(--bg-secondary)'
+          }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+              ▸ Relational Impact & Dependencies ({usage.length} Programme{usage.length === 1 ? '' : 's'}, {inbound.length + outbound.length} Dependencies)
+            </summary>
+
+            <div style={{ marginTop: '1rem' }}>
+              <div className="dependency-section" style={{ marginBottom: '1.5rem' }}>
+                <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', fontWeight: 700 }}>
+                  Impact Analysis: Used by Academic Programmes ({usage.length})
+                </h5>
+                {usage.length > 0 ? (
+                  usage.map((u, i) => {
+                    const isOutdated = u.versionReferenced !== latestVersionStr;
+                    const isDeprecated = module.versions.find(v => v.version === u.versionReferenced)?.status === 'deprecated';
+                    const isArchived = module.versions.find(v => v.version === u.versionReferenced)?.status === 'archived';
+                    return (
+                      <div key={i} className="dependency-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{u.programmeName}</span>
+                          <span style={{ fontSize: '0.85rem', color: (isDeprecated || isArchived) ? '#ef4444' : 'var(--text-muted)' }}>
+                            v{u.versionReferenced}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: (isDeprecated || isArchived) ? '#ef4444' : isOutdated ? '#777' : 'var(--text-muted)', fontStyle: (isOutdated || isDeprecated || isArchived) ? 'italic' : 'normal' }}>
+                          {isArchived ? 'Using archived version' : isDeprecated ? 'Using deprecated version' : isOutdated ? `Outdated reference (Registry is v${latestVersionStr})` : 'Current registry version'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Not referenced by any programme.</p>
+                )}
+              </div>
+
+              <div className="dependency-section" style={{ marginBottom: '1.5rem' }}>
+                <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', fontWeight: 700 }}>
+                  Inbound Dependencies: Modules Depending on This ({inbound.length})
+                </h5>
+                {inbound.length > 0 ? (
+                  inbound.map((d, i) => (
+                    <div key={i} className="dependency-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: 500 }}>{d.moduleName} ({d.moduleCode})</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.type} (v{d.versionConstraint || '1.0.0'}+)</span>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No other modules depend on this module.</p>
+                )}
+              </div>
+
+              <div className="dependency-section">
+                <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', fontWeight: 700 }}>
+                  Outbound Dependencies: Declared Prerequisites (v{latestVersion?.version}) ({outbound.length})
+                </h5>
+                {outbound.length > 0 ? (
+                  outbound.map((d, i) => (
+                    <div key={i} className="dependency-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: 500 }}>{d.moduleName}</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{d.type} (v{d.versionConstraint}+)</span>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No outbound dependencies defined.</p>
+                )}
+              </div>
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );

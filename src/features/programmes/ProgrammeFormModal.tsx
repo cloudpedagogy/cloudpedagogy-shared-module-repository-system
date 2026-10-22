@@ -35,6 +35,17 @@ export const ProgrammeFormModal: React.FC<Props> = ({
     setErrors([]);
   }, [editingProgramme, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,7 +72,15 @@ export const ProgrammeFormModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="prog-modal-title">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="prog-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="modal-card" style={{ maxWidth: '540px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
@@ -77,9 +96,14 @@ export const ProgrammeFormModal: React.FC<Props> = ({
               Programmes assemble and reuse shared modules with specific, deliberate version pins.
             </p>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
-            ✕
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button id="prog-header-submit-btn" type="button" className="btn btn-primary btn-sm" onClick={handleSubmit}>
+              {editingProgramme ? 'Save Changes' : 'Create Programme'}
+            </button>
+            <button id="prog-header-close-btn" type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </div>
 
         {errors.length > 0 && (
@@ -90,7 +114,7 @@ export const ProgrammeFormModal: React.FC<Props> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label htmlFor="prog-code-input" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>
               Programme Code <span style={{ color: '#ef4444' }}>*</span>
@@ -137,10 +161,10 @@ export const ProgrammeFormModal: React.FC<Props> = ({
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button id="prog-cancel-btn" type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button id="prog-submit-btn" type="submit" className="btn btn-primary">
               {editingProgramme ? 'Save Changes' : 'Create Programme'}
             </button>
           </div>

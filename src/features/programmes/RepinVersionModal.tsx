@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Programme, Module, RepositoryDataset } from '../../types';
-import { 
-  getVersionTitle, 
-  getVersionCode, 
-  getVersionLevel, 
-  getVersionCredits 
+import {
+  getVersionTitle,
+  getVersionCode,
+  getVersionLevel,
+  getVersionCredits
 } from '../../lib/modules/moduleService';
 import { sortVersionsDescending, compareVersions } from '../../lib/versioning';
 
@@ -47,6 +47,17 @@ export const RepinVersionModal: React.FC<Props> = ({
     setErrors([]);
   }, [availableVersions, currentRef?.version, isOpen]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !targetModule || !currentRef) return null;
 
   const currentVersionObj = targetModule.versions.find(v => v.version === currentRef.version);
@@ -77,7 +88,15 @@ export const RepinVersionModal: React.FC<Props> = ({
   const proposedLevel = getVersionLevel(proposedVersionObj, targetModule);
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="repin-modal-title">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="repin-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="modal-card" style={{ maxWidth: '620px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
@@ -93,9 +112,20 @@ export const RepinVersionModal: React.FC<Props> = ({
               Review differences and explicitly update the pinned version for <strong>{programme.name}</strong>. Other academic programmes and historical releases are untouched.
             </p>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
-            ✕
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              id="repin-header-confirm-btn"
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={!proposedVersionString || proposedVersionString === currentRef.version}
+              onClick={handleConfirm}
+            >
+              Update Pin
+            </button>
+            <button id="repin-header-close-btn" type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </div>
 
         {errors.length > 0 && (
@@ -189,10 +219,11 @@ export const RepinVersionModal: React.FC<Props> = ({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <button id="repin-cancel-btn" type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
           <button
+            id="repin-confirm-btn"
             type="button"
             className="btn btn-primary"
             onClick={handleConfirm}

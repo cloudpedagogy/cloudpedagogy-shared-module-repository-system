@@ -11,6 +11,17 @@ export const MethodologyDrawer: React.FC<Props> = ({ isOpen, onClose, issues }) 
   const warnings = issues.filter(i => i.type === 'warning');
   const infoItems = issues.filter(i => i.type === 'info');
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
     <div className={`drawer ${isOpen ? 'open' : ''}`} style={{ borderLeft: '1.5px solid var(--text-primary)' }}>
       <button 
@@ -44,12 +55,12 @@ export const MethodologyDrawer: React.FC<Props> = ({ isOpen, onClose, issues }) 
             To maintain its integrity as a system of record, this tool operates strictly at the **Registry Layer**.
           </p>
           <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>OPERATIONAL CONSTRAINTS:</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>OPERATIONAL CONSTRAINTS (NOT PERFORMED):</span>
             <ul style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: 'var(--text-secondary)', listStyleType: 'circle', paddingLeft: '1.2rem' }}>
-              <li>Perform pedagogical alignment analysis.</li>
-              <li>Simulate student pathways or success.</li>
-              <li>Automate update propagation or version updates.</li>
-              <li>Apply performance-based scoring or institutional evaluative metrics.</li>
+              <li>Does not perform pedagogical alignment analysis (managed in CAME).</li>
+              <li>Does not simulate student pathways or outcomes.</li>
+              <li>Does not automate version propagation across programmes.</li>
+              <li>Does not apply performance-based scoring or institutional evaluative metrics.</li>
             </ul>
           </div>
         </div>

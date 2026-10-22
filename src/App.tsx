@@ -61,6 +61,17 @@ function App() {
     return createBlankDataset();
   });
 
+  // Storage error state for recovery options
+  const [storageError, setStorageError] = useState<string | null>(() => {
+    if (storage.hasSavedData()) {
+      const res = storage.load();
+      if (!res.success && res.error) {
+        return res.error;
+      }
+    }
+    return null;
+  });
+
   const [currentView, setCurrentView] = useState<View>('modules');
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('all');
@@ -551,6 +562,76 @@ function App() {
           Load Demo Dataset
         </button>
       </div>
+
+      {/* STORAGE ERROR RECOVERY BANNER */}
+      {storageError && (
+        <div style={{
+          margin: '0 0 1.5rem 0',
+          padding: '1rem 1.25rem',
+          background: '#fef2f2',
+          border: '1.5px solid #ef4444',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ flex: 1, minWidth: '260px' }}>
+            <h4 style={{ margin: '0 0 0.25rem 0', color: '#991b1b', fontSize: '0.95rem', fontWeight: 700 }}>
+              ⚠️ Saved Repository Load Error
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d' }}>
+              {storageError}. A blank workspace was initialized in memory so you can continue working safely, and your stored data was not overwritten.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                const raw = localStorage.getItem(storage.getStorageKey()) || '';
+                const blob = new Blob([raw], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'smrs_raw_backup.json';
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              Export Raw Data
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setIsImportOpen(true)}
+            >
+              Import Backup
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ color: '#ef4444' }}
+              onClick={() => {
+                storage.clear();
+                setStorageError(null);
+                setDataset(createBlankDataset());
+                showNotification('Storage cleared. Blank workspace active.', 'info');
+              }}
+            >
+              Reset Storage
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setStorageError(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* INTEGRITY BANNER */}
       <div className="integrity-banner">

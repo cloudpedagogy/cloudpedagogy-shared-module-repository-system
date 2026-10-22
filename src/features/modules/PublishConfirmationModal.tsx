@@ -18,6 +18,18 @@ export const PublishConfirmationModal: React.FC<Props> = ({
   onConfirmPublish
 }) => {
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const validation: ValidationResult = validateForPublishing(draftVersion, module);
@@ -34,7 +46,15 @@ export const PublishConfirmationModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="publish-modal-title">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="publish-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="modal-card" style={{ maxWidth: '600px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
@@ -50,9 +70,21 @@ export const PublishConfirmationModal: React.FC<Props> = ({
               Publishing formalises this curriculum version and locks it as an immutable historical release.
             </p>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
-            ✕
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              id="publish-header-confirm-btn"
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={!validation.isValid}
+              onClick={handleConfirm}
+              style={{ opacity: validation.isValid ? 1 : 0.5, cursor: validation.isValid ? 'pointer' : 'not-allowed' }}
+            >
+              Confirm & Publish
+            </button>
+            <button id="publish-header-close-btn" type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </div>
 
         {submitErrors.length > 0 && (
@@ -123,10 +155,11 @@ export const PublishConfirmationModal: React.FC<Props> = ({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <button id="publish-cancel-btn" type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
           <button
+            id="publish-confirm-btn"
             type="button"
             className="btn btn-primary"
             disabled={!validation.isValid}

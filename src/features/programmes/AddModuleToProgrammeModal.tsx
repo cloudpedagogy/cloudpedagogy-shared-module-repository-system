@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Programme, Module, RepositoryDataset } from '../../types';
-import { 
-  getVersionTitle, 
-  getVersionCode, 
-  getVersionLevel, 
-  getVersionCredits 
+import {
+  getVersionTitle,
+  getVersionCode,
+  getVersionLevel,
+  getVersionCredits
 } from '../../lib/modules/moduleService';
 import { getLatestPublishedVersion, sortVersionsDescending } from '../../lib/versioning';
 
@@ -61,6 +61,17 @@ export const AddModuleToProgrammeModal: React.FC<Props> = ({
     }
   }, [availableModules, selectedModuleId, isOpen]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -88,7 +99,15 @@ export const AddModuleToProgrammeModal: React.FC<Props> = ({
   const selectedVersionObj = selectedModule?.versions.find(v => v.version === selectedVersionString);
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-module-modal-title">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-module-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="modal-card" style={{ maxWidth: '580px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
@@ -104,9 +123,20 @@ export const AddModuleToProgrammeModal: React.FC<Props> = ({
               Select a shared module from the repository and explicitly pin the exact published version required by this programme.
             </p>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
-            ✕
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              id="add-programme-module-header-btn"
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={eligibleVersions.length === 0 || !selectedVersionString}
+              onClick={handleSubmit}
+            >
+              Add to Programme
+            </button>
+            <button id="add-programme-module-header-close-btn" type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </div>
 
         {errors.length > 0 && (
@@ -127,11 +157,14 @@ export const AddModuleToProgrammeModal: React.FC<Props> = ({
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label htmlFor="module-select" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                Select Shared Module
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ padding: '0.85rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+              <label htmlFor="module-select" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                Stage 1: Select Shared Module
               </label>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
+                Choose an existing module from the shared curriculum repository.
+              </p>
               <select
                 id="module-select"
                 className="search-input"
@@ -147,10 +180,13 @@ export const AddModuleToProgrammeModal: React.FC<Props> = ({
               </select>
             </div>
 
-            <div>
-              <label htmlFor="version-select" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                Select Published Version to Pin
+            <div style={{ padding: '0.85rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+              <label htmlFor="version-select" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                Stage 2: Select Published Version to Pin
               </label>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
+                Programme instances pin explicit immutable releases, protecting student cohorts against unannounced curriculum updates.
+              </p>
               {eligibleVersions.length === 0 ? (
                 <div style={{ padding: '0.75rem', background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: '#92400e' }}>
                   This module has no published releases yet. Only published releases may be pinned to programmes.
@@ -191,10 +227,11 @@ export const AddModuleToProgrammeModal: React.FC<Props> = ({
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
+              <button id="add-programme-module-cancel-btn" type="button" className="btn btn-secondary" onClick={onClose}>
                 Cancel
               </button>
               <button
+                id="add-programme-module-submit-btn"
                 type="submit"
                 className="btn btn-primary"
                 disabled={eligibleVersions.length === 0 || !selectedVersionString}

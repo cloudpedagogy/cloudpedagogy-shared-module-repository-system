@@ -1,5 +1,6 @@
 import { RepositoryDataset, Module, ModuleVersion, Programme } from '../../types';
 import { demoDataset } from '../../data/demo';
+import { detectCircularPrerequisites } from '../../features/dependencies/dependencyUtils';
 
 export const STORAGE_KEY = 'smrs_repository_health_v1';
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -28,6 +29,13 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
   }
 
   const data = input as Partial<RepositoryDataset>;
+
+  // Schema version validation
+  if (data.schemaVersion !== undefined) {
+    if (typeof data.schemaVersion !== 'number' || isNaN(data.schemaVersion) || data.schemaVersion < 1 || data.schemaVersion > 2) {
+      errors.push(`Unsupported schema version "${data.schemaVersion}". This version of SMRS supports schema versions 1 and 2.`);
+    }
+  }
 
   // 1. Modules validation
   if (!Array.isArray(data.modules)) {
@@ -107,6 +115,26 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
           }
           if (!Array.isArray(ver.dependencies)) {
             errors.push(`${vPrefix}: "dependencies" must be an array.`);
+          } else {
+            const seenDeps = new Set<string>();
+            ver.dependencies.forEach((d, dIdx) => {
+              const dPrefix = `${vPrefix} dependency [${dIdx}]`;
+              if (!d || typeof d !== 'object') {
+                errors.push(`${dPrefix}: Must be an object.`);
+                return;
+              }
+              if (!d.targetId || typeof d.targetId !== 'string') {
+                errors.push(`${dPrefix}: Missing or invalid targetId.`);
+              } else {
+                if (d.targetId === mod.id) {
+                  errors.push(`${dPrefix}: Module cannot declare a dependency on itself (self-dependency rejected).`);
+                }
+                if (seenDeps.has(d.targetId)) {
+                  warnings.push(`${dPrefix}: Duplicate dependency on module "${d.targetId}".`);
+                }
+                seenDeps.add(d.targetId);
+              }
+            });
           }
 
           // Optional snapshot metadata validation
@@ -195,6 +223,18 @@ export const validateDatasetSchema = (input: unknown): ValidationReport => {
         });
       }
     });
+  }
+
+  // 3. Circular Prerequisites Check
+  if (Array.isArray(data.modules) && errors.length === 0) {
+    try {
+      const cycle = detectCircularPrerequisites(data as RepositoryDataset);
+      if (cycle.hasCycle) {
+        warnings.push(`Circular prerequisite dependency chain detected: ${cycle.cyclePath.join(' -> ')}.`);
+      }
+    } catch {
+      // ignore
+    }
   }
 
   return {

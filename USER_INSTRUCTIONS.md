@@ -1,79 +1,114 @@
-# SMRS User Instructions
+# SMRS User Instructions & Authoring Guide
 
-This document provides a detailed guide on how to use the **Shared Module Repository System (SMRS)** to manage and inspect reusable curriculum assets.
-
-## Core Navigation
-
-The application is divided into two primary views:
-1.  **Module Registry**: The central library of all versioned modules.
-2.  **Programme Composition**: A view of how modules are sequenced and reused across different academic programmes.
+This guide provides practical step-by-step instructions for using the **Shared Module Repository System (SMRS)** to author modules, govern version lifecycles, and assemble programmes with version pins.
 
 ---
 
-## 1. Module Registry
+## 1. Initial Workspace Setup
 
-The Registry allows you to browse the entire curriculum portfolio.
+When launching SMRS for the first time without saved data:
+- **Create Blank Repository:** Click this to begin with an empty repository ready for new curriculum design.
+- **Explore Demonstration Repository:** Click this to explore pre-populated sample modules and programmes (featuring intentional reference signals for illustration).
+- **Import Existing Repository:** Click to upload a `.json` repository file previously exported from SMRS.
 
-### **Filtering & Search**
--   **Search Bar**: Search for modules by name, code (e.g., `PH101`), or description keywords.
--   **Level Filter**: Narrow down modules by academic level (Level 1–4).
--   **Reset Filters**: Quickly clear all active filters to see the full registry.
-
-### **Module Cards**
-Each card provides a high-level summary:
--   **Badge: Level**: Indicates the academic level.
--   **Badge: Independent/Shared**: Shows if the module has dependencies or is reused across programmes.
--   **Badge: Versions**: Shows the number of historical releases available.
+You can switch or reset your repository at any time via the top navigation bar.
 
 ---
 
-## 2. Module Inspector (Side Drawer)
+## 2. Authoring & Managing Modules
 
-Clicking any module card opens the **Module Inspector**, which provides a holistic view of the curriculum asset.
+SMRS utilizes **progressive disclosure** to present essential information first while keeping advanced controls readily accessible.
 
-### **Overview Tab**
--   **Metadata**: Credits, level, and code.
--   **Learning Outcomes**: A list of what students will achieve.
--   **Assessment Structure**: Weighting and types of assessments (e.g., 60% Exam, 40% Coursework).
-
-### **Version History & Comparison**
--   **Select Version**: Use the dropdown to view metadata for historical releases.
--   **Comparison Mode**: Toggle "Compare" to perform a structural diff between any two versions. This highlights **Added**, **Removed**, or **Changed** outcomes and assessments.
-
-### **Dependency Tracking**
--   **Used by Programmes**: Lists every programme currently referencing this module, including whether they are on the **Current Version** or an **Older Version**.
--   **Depends on Modules**: Lists prerequisite or corequisite modules required by this asset.
-
----
-
-## 3. Programme Composition
-
-Switch to the **Programme Composition** view to see how modules are assembled into full degrees or pathways.
-
--   **Programme List**: Select a programme (e.g., *BSc Public Health*) from the sidebar.
--   **Module Sequence**: See the ordered list of modules.
--   **Reuse Signals**: Modules marked as **Shared Asset** are used in multiple programmes across the repository.
--   **Version Lag**: If a programme uses an older version of a module, an **"Update Available"** badge will appear.
-
----
-
-## 4. Repository Integrity (Principles & Integrity)
-
-The **Principles & Integrity** drawer (top right) provides architectural documentation and structural safeguards.
-
-### **Methodology & Scope**
--   Explains the **"Module as Atom"** architecture.
--   Reinforces the tool's role as a **Repository Layer** (Registry) rather than an analysis or simulation engine.
-
-### **Integrity Signals**
-The system performs a real-time audit for:
--   **Duplicate IDs**: Overlapping module or programme codes.
--   **Invalid Version Links**: References to module releases that do not exist in the registry.
--   **Missing References**: References to modules that have been archived or removed.
+### Module Authoring Sequence:
+1. **Basic Module Details:**
+   - In the **Module Registry**, click **+ New Module**.
+   - Enter **Module Code**, **Module Title**, **Academic Level**, **Credits**, and **Description**.
+   - Optional departmental ownership and subject tags are neatly tucked into a collapsible **Optional Details** section.
+   - Click **Next: Initial Outcomes (Optional) →** or click **Create Module** immediately.
+2. **Initial Learning Outcomes & Assessments (Optional):**
+   - Enter preliminary intended learning outcomes and initial assessment components, or leave blank to author them directly in the Draft Editor.
+   - Click **Create Module**. An editable draft version (`v1.0.0`) is initialized automatically.
+3. **Draft Curriculum Content Authoring:**
+   - Click on the module card to open the **Module Inspector** drawer.
+   - Click **✎ Edit Draft Content** directly in the Governance banner.
+   - SMRS organizes draft authoring into 4 dedicated, staged tabs:
+     - **Tab 1 — Learning Outcomes (ILOs):** Add and refine specific student competencies (minimum 1 required for publishing).
+     - **Tab 2 — Assessments & Weighting:** Configure assessment methods and component weights (must total 100% to publish).
+     - **Tab 3 — Prerequisites & Dependencies (Optional):** Declare prerequisites or corequisites with other modules in the repository.
+     - **Tab 4 — Version Snapshot & Outline (Advanced):** Review or override frozen historical metadata (title, credits, level), release change summary, and syllabus units.
+   - At the bottom of the editor, a real-time **Draft Progress & Readiness Strip** confirms when the draft satisfies all publishing rules.
+   - Click **Save Draft Content** from any tab at any time. Drafts can be freely saved and resumed.
+4. **Pre-flight Check & Publishing:**
+   - In the Module Inspector, click **Check Readiness** to preview validation status.
+   - Click **Publish Release** to review the frozen snapshot summary, verify immutability consequences, and formalize the release.
 
 ---
 
-## 5. Data Management
+## 3. Version Lifecycle Governance
 
--   **Export JSON**: Download the entire repository state for backup or external review.
--   **Reset Data**: Restore the repository to the original Healthcare/Public Health demo dataset.
+SMRS enforces a strict academic lifecycle:
+$$\text{Draft} \longrightarrow \text{Published} \longrightarrow \text{Deprecated} \longrightarrow \text{Archived}$$
+
+### Publishing a Version
+1. Open the draft version in the Module Inspector.
+2. Click **Publish Version**.
+3. SMRS performs pre-flight checks:
+   - Total assessment weights must equal exactly 100%.
+   - At least one learning outcome must be specified.
+   - A substantive description must be provided.
+   - No self-dependencies or duplicate dependencies.
+4. Confirm publication. Once published, the version snapshot becomes **permanently immutable**.
+
+### Creating a Successor Draft
+1. From a published module in the Inspector, click **Create Successor Draft**.
+2. Select the SemVer release type:
+   - **Patch:** Typo fixes, minor clarifications.
+   - **Minor:** Revised learning outcomes, adjusted reading lists, updated syllabus.
+   - **Major:** Structural redesign, substantial assessment restructuring, prerequisite changes.
+3. Enter release notes and confirm. SMRS copies the previous version's curriculum content into the new draft while preserving historical snapshots.
+
+### Deprecating and Archiving
+- **Deprecate:** Mark a version as scheduled for phase-out. Programmes using it receive a warning advisory, but existing pins remain valid.
+- **Archive:** Retire an obsolete version completely. SMRS prevents archived versions from being assigned or repinned to programmes.
+
+---
+
+## 4. Programme Composition & Version Pinning
+
+### Creating Programmes
+1. Switch to the **Programme Composition** tab.
+2. Click **+ New Programme**.
+3. Enter a unique Programme Code (e.g., `BSC-PH`) and Programme Title.
+4. Click **Create Programme**.
+
+### Adding Modules & Pinning Versions
+1. Select the programme from the sidebar.
+2. Click **+ Add Module**.
+3. Select an available module from the dropdown. Only published or deprecated releases can be added (drafts and archived versions are disallowed).
+4. Choose the specific version pin.
+5. Click **Add to Programme**.
+
+### Reordering Programme Modules
+- Use the **Move Up** and **Move Down** arrow buttons on any module row to sequence modules in the intended pedagogical pathway.
+
+### Independent Version Re-pinning
+- If a newer published version of a module becomes available, an **Update Available** badge appears next to the pinned version.
+- Click **Re-pin Version** on that module row to upgrade the reference.
+- **Isolation Guarantee:** Re-pinning updates only the active programme. Other programmes referencing that module remain pinned to their selected versions.
+
+---
+
+## 5. Dependency & Relationship Integrity
+
+- **Safe Deletion:** SMRS blocks the deletion of any module currently referenced in a programme or required as a prerequisite by another module.
+- **Circular Prerequisite Detection:** The system flags any direct or indirect circular loops (e.g. Module A requiring Module B which requires Module A).
+- **Integrity Signals:** The **Principles & Integrity** drawer in the header audits the entire repository for duplicate codes, broken pins, and missing targets in real time.
+
+---
+
+## 6. Data Portability, Backups & Recovery
+
+- **Export JSON:** Click **Export JSON** in the header to download your entire repository to a local file on your computer.
+- **Import JSON:** Click **Import JSON** to restore a repository. SMRS validates syntax, schema, and reference consistency before applying changes.
+- **Persistence Error Recovery:** In the unlikely event of browser storage corruption, SMRS protects your workspace, initializes safely in-memory, and presents options to export the raw data or restore from a backup.
+- **Regular Backups:** Because SMRS operates locally in your web browser, always export regular JSON backups of your curriculum repositories.

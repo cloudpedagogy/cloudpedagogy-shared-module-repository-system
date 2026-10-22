@@ -94,6 +94,14 @@ export const validateForPublishing = (version: ModuleVersion, parentModule?: Mod
   if (!version.assessments || version.assessments.length === 0) {
     errors.push('Module must have at least one assessment defined.');
   } else {
+    for (const a of version.assessments) {
+      if (!a.type || !a.type.trim()) {
+        errors.push('All assessment components must specify an assessment type.');
+      }
+      if (typeof a.weight !== 'number' || isNaN(a.weight) || !isFinite(a.weight) || a.weight < 0 || a.weight > 100) {
+        errors.push(`Assessment component "${a.type || 'Unnamed'}" must have a valid weight between 0% and 100%.`);
+      }
+    }
     const totalWeight = version.assessments.reduce((sum, a) => sum + (Number(a.weight) || 0), 0);
     if (totalWeight !== 100) {
       errors.push(`Total assessment weight must be exactly 100% (currently ${totalWeight}%).`);
@@ -107,12 +115,18 @@ export const validateForPublishing = (version: ModuleVersion, parentModule?: Mod
   // Dependencies check
   if (version.dependencies && version.dependencies.length > 0) {
     const parentId = parentModule?.id || version.moduleId;
+    const seenTargets = new Set<string>();
     for (const dep of version.dependencies) {
       if (dep.targetId === parentId) {
         errors.push(`Module cannot declare a dependency on itself (${parentId}).`);
       }
       if (!dep.targetId || !dep.targetId.trim()) {
         errors.push('Dependency missing target module identifier.');
+      } else {
+        if (seenTargets.has(dep.targetId)) {
+          errors.push(`Duplicate dependency on module "${dep.targetId}". A module can only declare a dependency on another module once.`);
+        }
+        seenTargets.add(dep.targetId);
       }
     }
   }

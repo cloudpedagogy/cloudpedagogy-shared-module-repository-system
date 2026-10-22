@@ -143,6 +143,14 @@ export const addModuleToProgramme = (
     };
   }
 
+  // Pinning archived versions to programmes is prohibited
+  if (targetVersion.status === 'archived') {
+    return {
+      success: false,
+      errors: [`Cannot pin archived version v${versionString} to programme. Archived versions are retired and cannot be assigned to programmes.`]
+    };
+  }
+
   const updatedProgramme: Programme = {
     ...programme,
     modules: [...programme.modules, { moduleId, version: versionString }]
@@ -225,6 +233,10 @@ export const repinProgrammeModuleVersion = (
 
   if (targetVersion.status === 'draft') {
     return { success: false, errors: ['Cannot pin draft version to a programme. Only published or deprecated releases are eligible.'] };
+  }
+
+  if (targetVersion.status === 'archived') {
+    return { success: false, errors: [`Cannot re-pin to archived version v${newVersionString}. Archived versions are retired and ineligible for programme assignment.`] };
   }
 
   const currentVersion = programme.modules[moduleRefIndex].version;

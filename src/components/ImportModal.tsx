@@ -16,6 +16,17 @@ export const ImportModal: React.FC<Props> = ({ isOpen, onClose, onConfirmImport 
   const [validatedData, setValidatedData] = useState<RepositoryDataset | null>(null);
   const [warningsAcknowledged, setWarningsAcknowledged] = useState<boolean>(false);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleResetAndClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +81,15 @@ export const ImportModal: React.FC<Props> = ({ isOpen, onClose, onConfirmImport 
   const isImportEnabled = validatedData !== null && (!hasWarnings || warningsAcknowledged);
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="import-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleResetAndClose();
+      }}
+    >
       <div className="modal-card" style={{ maxWidth: '620px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>

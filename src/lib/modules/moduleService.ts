@@ -239,9 +239,23 @@ export const updateDraftVersionContent = (
       if (!a.type || !a.type.trim()) {
         return { success: false, errors: ['Assessment component must have a type (e.g. Essay, Exam).'] };
       }
-      if (typeof a.weight !== 'number' || isNaN(a.weight) || a.weight < 0 || a.weight > 100) {
-        return { success: false, errors: ['Assessment weight must be a number between 0 and 100.'] };
+      if (typeof a.weight !== 'number' || isNaN(a.weight) || !isFinite(a.weight) || a.weight < 0 || a.weight > 100) {
+        return { success: false, errors: ['Assessment weight must be a valid number between 0 and 100.'] };
       }
+    }
+  }
+
+  // Validate dependencies if provided
+  if (contentUpdates.dependencies) {
+    const seenTargets = new Set<string>();
+    for (const d of contentUpdates.dependencies) {
+      if (d.targetId === module.id) {
+        return { success: false, errors: ['A module cannot declare a dependency on itself (self-dependency rejected).'] };
+      }
+      if (seenTargets.has(d.targetId)) {
+        return { success: false, errors: [`Duplicate dependency declared on module "${d.targetId}".`] };
+      }
+      seenTargets.add(d.targetId);
     }
   }
 

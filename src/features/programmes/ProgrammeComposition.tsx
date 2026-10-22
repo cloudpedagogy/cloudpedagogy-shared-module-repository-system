@@ -48,6 +48,7 @@ export const ProgrammeComposition: React.FC<Props> = ({
   const errors = conflicts.filter(c => c.severity === 'error');
   const warnings = conflicts.filter(c => c.severity === 'warning');
 
+  const hasUnresolvedRefs = resolvedModules.some(m => m.isMissingModule || m.isMissingVersion);
   const totalCredits = resolvedModules.reduce((sum, m) => sum + (m.credits || 0), 0);
 
   return (
@@ -66,7 +67,14 @@ export const ProgrammeComposition: React.FC<Props> = ({
           <div className="metadata-row" style={{ marginTop: '0.5rem' }}>
             <span className="metadata-label">{resolvedModules.length} Modules</span>
             <span className="metadata-dot">·</span>
-            <span className="metadata-label" style={{ fontWeight: 600 }}>{totalCredits} Total Credits</span>
+            <span className="metadata-label" style={{ fontWeight: 600 }}>
+              {totalCredits} Total Credits
+              {hasUnresolvedRefs && (
+                <span style={{ color: '#ef4444', fontWeight: 600, marginLeft: '0.4rem', fontSize: '0.8rem' }}>
+                  (Incomplete: unresolved references)
+                </span>
+              )}
+            </span>
           </div>
         </div>
 

@@ -39,6 +39,17 @@ export const SuccessorDraftModal: React.FC<Props> = ({
     }
   }, [defaultSource]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const selectedSource = module.versions.find(v => v.id === sourceVersionId) || defaultSource;
@@ -88,7 +99,15 @@ export const SuccessorDraftModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="successor-modal-title">
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="successor-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="modal-card" style={{ maxWidth: '580px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
@@ -104,9 +123,14 @@ export const SuccessorDraftModal: React.FC<Props> = ({
               Branch a new independent draft version from a published historical release. Content is cloned safely without altering published records.
             </p>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
-            ✕
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button id="successor-header-submit-btn" type="button" className="btn btn-primary btn-sm" onClick={handleSubmit}>
+              Create Draft
+            </button>
+            <button id="successor-header-close-btn" type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </div>
 
         {errors.length > 0 && (
@@ -218,10 +242,10 @@ export const SuccessorDraftModal: React.FC<Props> = ({
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button id="successor-cancel-btn" type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button id="successor-submit-btn" type="submit" className="btn btn-primary">
               Create Successor Draft
             </button>
           </div>
